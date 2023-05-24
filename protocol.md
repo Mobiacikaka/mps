@@ -1,0 +1,31 @@
+# Protocl Details
+
+## Setting
+
+1. There are $N$ edges.
+2. For edge $Edge_i$, there are $m_i$ users, input denoted as $\{x_{i,1}, \ldots, x_{i, m_i}\}$.
+3. The output is $\{ x_{\pi(1)}, x_{\pi(2)}, \ldots, x_{\pi(n)} \}$. $n = \sum\limits_{i=1}^N m_i$
+
+## Protocol
+
+1. packing
+	- share a packing length $k$
+	- padding
+	- generate a random value for every pack
+2. sharing
+	- number each edge node
+	- create a new shared array in every edge node
+	- shared every pack of edge node according to the order of edge node's number
+3. create sorting network
+	- create probabilistic sorting network
+		-  based on "A (fairly) simple circuit that (usually) sorts"
+	- use a NxM two-dimentional array to indicate the comparison target
+4. run sorting network
+    - all party generate two edaBits r1, r2 for comparator
+    - if the comparator output 0, do nothing
+    - if the comparator output 1, exchange the share in the shared array
+    - the comparator is build by two components
+        - one is $Π^{LTBits}$, another is $Π^{LTS}$
+        - by "Rabbit: Efficient Comparison for Secure Multi-Party Computation"
+5. submitting
+    - each node submit their shares separtely to the center analyzer
