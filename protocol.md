@@ -1,5 +1,12 @@
 # Protocl Details
 
+**butterfly tournament**
+The butterfly tournament has the property that when two players meet in the i-th round, they have achieved the same sequence of outcomes in two independent butterfly tournaments T_0 and T_1 of order i - 1.
+
+## Probabilistic Sorting Network
+
+1. If $l < \epsilon\sqrt{k}$: Apply bitonic sort to blocks of size $2^l$ followed by two sets of bitonic merges between adjacent blocks.
+
 ## Setting
 
 1. There are $N$ edges.
@@ -9,7 +16,7 @@
 ## Protocol
 
 1. packing
-	- share a packing length $k$
+	- share a packing length $K$
 	- padding
 	- generate a random value for every pack
 2. sharing
