@@ -29,7 +29,7 @@ class graph:
 
 	def weight(self, subgraph: list=[]) -> int:
 		if len(subgraph) == 0:
-			subgraph = list(range(self.n))
+			subgraph = [1] * self.n
 		return sum(
 			[self.E[i][j] * subgraph[i] * subgraph[j]
 			for i in range(self.n-1) for j in range(i+1, self.n)]
@@ -47,14 +47,6 @@ class graph:
 			for j in range(i+1, n):
 				E[i][j] = numpy.random.randint(100) + 1
 				E[j][i] = E[i][j]
-		# for i in range(n-1):
-		# 	for j in range(i+1, n):
-		# 		if i == j:
-		# 			E[i][j] = 0
-		# 		elif (i < n//2 and j < n//2) or (i >= n//2 and j >= n//2):
-		# 			E[i][j] = E[j][i] = 1
-		# 		else:
-		# 			E[i][j] = E[j][i] = 10
 		return V, a, E
 
 	def __printGraph__(self):
@@ -75,16 +67,12 @@ class CPPMINSub:
 	def create_model(self) -> None:
 		self.model = gurobipy.Model("sub model")
 		self.y = self.model.addVars(self.G.n, lb=0, ub=1, vtype=GRB.INTEGER, name='y')
-		# self.z = self.model.addVars(self.G.n * (self.G.n - 1), lb=0, ub=GRB.INFINITY, vtype=GRB.INTEGER, name='z')
-		# self.model.addConstrs( (self.z[i*self.G.n+j] >= self.y[i] + self.y[j] - 1) for i in range(self.G.n-1) for j in range(i, self.G.n) )
 		self.model.addConstr( (gurobipy.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
 
 	def weight(self, subgraph):
 		return gurobipy.quicksum( (self.G.E[i][j] * subgraph[i] * subgraph[j]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
 
 	def set_objective(self, pi: list):
-		# self.model.setObjective(-gurobipy.quicksum(pi[i] * self.y[i] for i in range(self.G.n)) +
-		# 											gurobipy.quicksum(self.G.E[i][j] * self.z[i*self.G.n+j] for i in range(self.G.n - 1) for j in range(i+1, self.G.n)), sense=GRB.MINIMIZE)
 		self.model.setObjective(
 			- gurobipy.quicksum(pi[i] * self.y[i] for i in range(self.G.n))
 			+ self.weight(self.y)
@@ -106,13 +94,8 @@ class CPPMINSub:
 
 class MLP:
 	def __init__(self, G: graph, P: list, S: int) -> None:
-		## TODO
 		self.G = G
-		self.P = P
-		# self.w = w
 		self.S = S
-		# self.N = len(self.P)
-		# self.k = len(self.G.V) // self.S + 1
 
 	def create_model(self):
 		self.x = []
@@ -129,29 +112,19 @@ class MLP:
 		return pi
 
 	def __set_contrs(self) -> None:
-		## TODO
 		self.constrs = self.model.addConstrs(
-			gurobipy.quicksum(
-				self.x[i] * int(v in self.P[i]) for i in range(len(self.x))
-			) == 1
-			for v in self.G.V
+			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) == 1 for _ in range(self.G.n)
 		)
 
 	def __set_vars(self) -> None:
-		## TODO
 		self.x.append(self.model.addVar(obj=self.G.weight(), lb=0, ub=1, vtype=GRB.CONTINUOUS, name='x0'))
-		# self.P.append(list(range(self.G.n)))
-		# for i in range(int(numpy.ceil(self.G.n / self.S))):
-		# 	self.x.append(self.model.addVar(obj=self.w[i], lb=0, ub=1, vtype=GRB.CONTINUOUS, name='x'+str(i)))
 		self.n_dim = len(self.x)
 		self.n_col = 1
 
 	def update_contrs(self, column_coeff):
 		self.column = gurobipy.Column(column_coeff, self.model.getConstrs())
-		## TODO:
 		self.model.addVar(
 			vtype=GRB.CONTINUOUS, lb=0,
-			# obj=sum([self.G.E[i][j]*column_coeff[i]*column_coeff[j] for i in range(self.G.n-1) for j in range(i+1, self.G.n)]),
 			obj=self.G.weight(column_coeff),
 			name='x'+str(self.n_dim), column=self.column
 		)
@@ -178,14 +151,6 @@ def solve():
 	for i in range(S, n-S+1):
 		P += list(itertools.combinations(G.V, i))
 	P = [G.V] + P
-	w = []
-	for cluster in P:
-		edges = list(itertools.combinations(cluster, 2))
-		weight = 0
-		for edge in edges:
-			i, j = edge
-			weight += G.E[i][j]
-		w.append(weight)
 
 	# cppmin = CPPMINMaster(len(P), S, P, w, G)
 	cppmin = MLP(G, P, S)
@@ -201,7 +166,6 @@ def solve():
 		sub_prob.set_objective(pi)
 		sub_prob.solve()
 		y = sub_prob.get_solution()
-		print('y=', y)
 		reduced_cost = sub_prob.get_reduced_cost()
 		sub_prob.write()
 		cppmin.update_contrs(column_coeff=y)
