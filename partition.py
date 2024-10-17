@@ -3,8 +3,7 @@
 import itertools
 import numpy
 import gurobipy
-from gurobipy import GRB, gurobi
-import bisect
+from gurobipy import GRB
 
 ############
 ## CPPMIN ##
@@ -26,6 +25,17 @@ class graph:
 		self.n = n
 		self.V, self.a, self.E = self.__createGraph__(self.n)
 		self.__printGraph__()
+		self.__sortEdge__()
+		# self.__printGraph__()
+
+	def __sortEdge__(self) -> None:
+		EdgeName = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
+		EdgeName = sorted(EdgeName, key=lambda x: self.E[x[0]][x[1]], reverse=True)
+		self.EdgeValue = self.E
+		for k in range(len(EdgeName)):
+			i = EdgeName[k][0]
+			j = EdgeName[k][1]
+			self.E[i][j] = self.E[j][i] = 0.5**(k-20)
 
 	def weight(self, subgraph: list=[]) -> int:
 		if len(subgraph) == 0:
@@ -42,11 +52,10 @@ class graph:
 		## vertex weight
 		a = [1] * n
 		## edges
-		E = [ [ 0 for _ in range(n) ] for _ in range(n) ]
+		E = [ [ 0.0 for _ in range(n) ] for _ in range(n) ]
 		for i in range(n-1):
 			for j in range(i+1, n):
-				E[i][j] = numpy.random.randint(100) + 1
-				E[j][i] = E[i][j]
+				E[i][j] = E[j][i] = float(numpy.random.randint(100) + 1)
 		return V, a, E
 
 	def __printGraph__(self):
@@ -59,7 +68,7 @@ class graph:
 			print()
 		print()
 
-class CPPMINSub:
+class SUB:
 	def __init__(self, G: graph, S: int) -> None:
 		self.G = G
 		self.S = S
@@ -93,7 +102,7 @@ class CPPMINSub:
 		self.model.write('sub_model.lp')
 
 class MLP:
-	def __init__(self, G: graph, P: list, S: int) -> None:
+	def __init__(self, G: graph, S: int) -> None:
 		self.G = G
 		self.S = S
 
@@ -106,6 +115,12 @@ class MLP:
 	def solve(self, flag = 0):
 		self.model.Params.OutputFlag = flag
 		self.model.optimize()
+
+		if flag == 1:
+			for x in self.model.getVars():
+				# print(x.VarName, '=', x.X)
+				if x.X == 1.0:
+					print(self.model.getCol(x))
 
 	def get_dual_vars(self):
 		pi = [self.constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(self.constrs))]
@@ -142,35 +157,41 @@ class MLP:
 		self.model.write("model.lp")
 
 def solve():
-	MAX_ITER_TIMES = 100
+	MAX_ITER_TIMES = 10000
 
-	n = 10 ## number of vertex
-	S = 3  ## least number of cluster
+	## number of vertex
+	n = 20
+	## least number of cluster
+	S = 5
 	G = graph(n)
-	P = []
-	for i in range(S, n-S+1):
-		P += list(itertools.combinations(G.V, i))
-	P = [G.V] + P
 
-	# cppmin = CPPMINMaster(len(P), S, P, w, G)
-	cppmin = MLP(G, P, S)
+	cppmin = MLP(G, S)
 	cppmin.create_model()
-	sub_prob = CPPMINSub(S=S, G=G)
+	sub_prob = SUB(G, S)
 	sub_prob.create_model()
 
-	for i in range(MAX_ITER_TIMES):
+	i = 0
+	# for i in range(MAX_ITER_TIMES):
+	while True:
+		if i % 100 == 0:
+			print("ITER TIMES:", i)
+		## 2: Approximately solve the current LP relaxation using CPLEX
 		cppmin.solve()
+
+		## 5: Generate columns using an IP solver, if new columns are found goto 2
 		pi = cppmin.get_dual_vars()
 		cppmin.write()
-
 		sub_prob.set_objective(pi)
 		sub_prob.solve()
 		y = sub_prob.get_solution()
 		reduced_cost = sub_prob.get_reduced_cost()
 		sub_prob.write()
 		cppmin.update_contrs(column_coeff=y)
+
+		## 6: If the gap between the value of the LP relaxation and the value of the incumbent integer solution is sufficiently small, STOP with optimality
 		if reduced_cost >= 0:
 			break
+		i += 1
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
