@@ -1,10 +1,12 @@
 import gurobipy as gp
 from gurobipy import GRB
+import numpy
 
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
 		self.V, self.a, self.E = self.__createGraph__(self.n)
+		print('weight:', self.weight())
 		self.__printGraph__()
 		# self.__sortEdge__()
 		# self.__printGraph__()
@@ -40,14 +42,44 @@ class Graph:
 		return V, a, E
 
 	def __printGraph__(self):
-		for v in self.V:
-			print(str(v), end='\t')
-		print('\nEdges:')
 		for edges in self.E:
 			for edge in edges:
 				print(str(edge), end='\t')
 			print()
 		print()
+
+class PriceIP:
+	def __init__(self, G: Graph, S: int) -> None:
+		self.G = G
+		self.S = S
+
+	def create_model(self) -> None:
+		self.model = gp.Model('sub model')
+		self.y = self.model.addVars(self.G.n, lb=0, ub=1, vtype=GRB.INTEGER, name='y')
+		self.model.addConstr( (gp.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
+
+	def weight(self, subgraph):
+		return gp.quicksum( (self.G.E[i][j] * subgraph[i] * subgraph[j]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
+
+	def set_objective(self, pi: list):
+		self.model.setObjective(
+			- gp.quicksum(pi[i] * self.y[i] for i in range(self.G.n))
+			+ self.weight(self.y)
+			, sense=GRB.MINIMIZE
+		)
+
+	def solve(self, flag=0):
+		self.model.Params.OutputFlag = flag
+		self.model.optimize()
+
+	def get_solution(self):
+		return [self.model.getVars()[i].x for i in range(self.G.n)]
+
+	def get_reduced_cost(self):
+		return self.model.ObjVal
+
+	def write(self):
+		self.model.write('sub_model.lp')
 
 class Node:
 	def __init__(self, model: gp.Model, upper_bound: float, lower_bound: float, candidate_vars: list) -> None:
@@ -58,17 +90,17 @@ class Node:
 	def optimize(self, solve):
 		self.obj_values, self.solution = solve(self.model)
 		if self.obj_values == None:
-			return "infeasible"
-		return "feasible"
+			return 'infeasible'
+		return 'feasible'
 
 	def update_upper_bound(self):
 		self.upper_bound = self.obj_values
-		assert(self.lower_bound <= self.upper_bound), "upper bound is less than lower bound"
+		assert(self.lower_bound <= self.upper_bound), 'upper bound is less than lower bound'
 
 	def update_lower_bound(self):
 		if self.lower_bound < self.obj_values:
 			self.lower_bound = self.obj_values
-			assert(self.lower_bound <= self.upper_bound), "upper bound is less than lower bound"
+			assert(self.lower_bound <= self.upper_bound), 'upper bound is less than lower bound'
 
 	def is_integer(self):
 		for var in self.solution:
@@ -81,7 +113,25 @@ class Node:
 			return True
 		return False
 
-	def get_child_problem(self):
+	def generate_columns_with_gurobi(self, G, subprob: PriceIP):
+		constrs = self.model.getConstrs()
+		pi = [constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(constrs))]
+		subprob.set_objective(pi)
+		subprob.solve()
+		y = subprob.get_solution()
+		# reduced_cost = subprob.get_reduced_cost()
+		subprob.write()
+		column = gp.Column(y, self.model.getConstrs())
+		varlen = len(self.model.getVars())
+		self.candidate_vars.append(varlen)
+		self.model.addVar(
+			vtype=GRB.CONTINUOUS,
+			obj=G.weight(y),
+			name='x'+str(varlen),
+			column=column
+		)
+
+	def get_child_problem(self, subprob: PriceIP):
 		## TODO
 		self.child_left, self.child_right = self.model.copy(), self.model.copy()
 		branch_index, self.candidate_child_vars = self.choice_branch(self.candidate_vars)
@@ -126,6 +176,9 @@ def Main():
 	model.optimize()
 	model.write('model_integer.lp')
 
+	subprob = PriceIP(G, S)
+	subprob.create_model()
+
 	upper_bound, lower_bound = float('inf'), 0.0
 	model_relax = model.relax()
 	root_node = Node(model=model_relax, upper_bound=upper_bound, lower_bound=lower_bound, candidate_vars=[0])
@@ -135,7 +188,7 @@ def Main():
 	while candidate_node:
 		node, candidate_node = choice_node(candidate_node)
 		if node.upper_bound <= lower_bound:
-			print('prune by bound')
+			print('prune by bound', "node.upper_bound <= lower_bound")
 			continue
 		model_status = node.optimize(heuristic_solve)
 		if model_status == 'infeasible':
@@ -151,8 +204,11 @@ def Main():
 				upper_bound = node.upper_bound
 				current_optimum = node.solution
 			continue
+
+		node.generate_columns_with_gurobi(G, subprob)
+
 		if node.is_child_problem():
-			child_node1, child_node2 = node.get_child_problem()
+			child_node1, child_node2 = node.get_child_problem(subprob)
 			candidate_node.append(child_node1)
 			candidate_node.append(child_node2)
 	

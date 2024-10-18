@@ -74,7 +74,7 @@ class SUB:
 		self.S = S
 
 	def create_model(self) -> None:
-		self.model = gurobipy.Model("sub model")
+		self.model = gurobipy.Model('sub model')
 		self.y = self.model.addVars(self.G.n, lb=0, ub=1, vtype=GRB.INTEGER, name='y')
 		self.model.addConstr( (gurobipy.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
 
@@ -108,7 +108,7 @@ class MLP:
 
 	def create_model(self):
 		self.x = []
-		self.model = gurobipy.Model("Master")
+		self.model = gurobipy.Model('Master')
 		self.__set_vars()
 		self.__set_contrs()
 
@@ -147,14 +147,14 @@ class MLP:
 		self.n_col += 1
 
 	def print_status(self):
-		print("master objective value: {}".format(self.model.ObjVal))
+		print('master objective value: {}'.format(self.model.ObjVal))
 
 	def to_int(self):
 		for x in self.model.getVars():
-			x.setAttr("VType", GRB.INTEGER)
+			x.setAttr('VType', GRB.INTEGER)
 
 	def write(self):
-		self.model.write("model.lp")
+		self.model.write('model.lp')
 
 def solve():
 	MAX_ITER_TIMES = 10000
@@ -174,7 +174,7 @@ def solve():
 	# for i in range(MAX_ITER_TIMES):
 	while True:
 		if i % 100 == 0:
-			print("ITER TIMES:", i)
+			print('ITER TIMES:', i)
 		## 2: Approximately solve the current LP relaxation using CPLEX
 		cppmin.solve()
 
