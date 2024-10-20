@@ -160,9 +160,9 @@ def solve():
 	MAX_ITER_TIMES = 10000
 
 	## number of vertex
-	n = 20
+	n = 9
 	## least number of cluster
-	S = 5
+	S = 3
 	G = graph(n)
 
 	cppmin = MLP(G, S)

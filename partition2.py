@@ -1,3 +1,4 @@
+import itertools
 import gurobipy as gp
 from gurobipy import GRB
 import numpy
@@ -98,7 +99,7 @@ class Node:
 		assert(self.lower_bound <= self.upper_bound), 'upper bound is less than lower bound'
 
 	def update_lower_bound(self):
-		if self.lower_bound < self.obj_values:
+		if self.lower_bound > self.obj_values:
 			self.lower_bound = self.obj_values
 			assert(self.lower_bound <= self.upper_bound), 'upper bound is less than lower bound'
 
@@ -115,30 +116,46 @@ class Node:
 
 	def generate_columns_with_gurobi(self, G, subprob: PriceIP):
 		constrs = self.model.getConstrs()
-		pi = [constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(constrs))]
+		try:
+			pi = [constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(constrs))]
+		except:
+			self.model.write('error.lp')
+			print('\nExit with error: Cannot acquire pi')
+			exit(0)
 		subprob.set_objective(pi)
 		subprob.solve()
 		y = subprob.get_solution()
 		# reduced_cost = subprob.get_reduced_cost()
 		subprob.write()
-		column = gp.Column(y, self.model.getConstrs())
-		varlen = len(self.model.getVars())
-		self.candidate_vars.append(varlen)
+		column = None
+		try:
+			column = gp.Column(y, self.model.getConstrs())
+		except:
+			column = gp.Column(y+[0] * (len(self.model.getConstrs()) - len(y)), self.model.getConstrs())
+		self.candidate_vars.append(self.candidate_vars[-1]+1)
 		self.model.addVar(
 			vtype=GRB.CONTINUOUS,
 			obj=G.weight(y),
-			name='x'+str(varlen),
+			name='x'+str(self.candidate_vars[-1]),
 			column=column
 		)
+		print('generate_columns_with_gurobi: ', y)
 
-	def get_child_problem(self, subprob: PriceIP):
+	def get_child_problem(self):
 		## TODO
 		self.child_left, self.child_right = self.model.copy(), self.model.copy()
 		branch_index, self.candidate_child_vars = self.choice_branch(self.candidate_vars)
-		self.child_left.addConstr(self.child_left.getVars()[branch_index] == 0)
-		self.child_right.addConstr(self.child_right.getVars()[branch_index] == 1)
+		try:
+			self.child_left.addConstr(self.child_left.getVars()[branch_index] == 0)
+			self.child_left.write('child_left.lp')
+			self.child_right.addConstr(self.child_right.getVars()[branch_index] == 1)
+		except:
+			print('candidate_vars', self.candidate_vars)
+			print('branch_index', branch_index)
+			print('getVars', self.child_left.getVars())
+			exit()
 		node_left = Node(self.child_left, self.upper_bound, self.lower_bound, self.candidate_child_vars)
-		node_right = Node(self.child_left, self.upper_bound, self.lower_bound, self.candidate_child_vars)
+		node_right = Node(self.child_right, self.upper_bound, self.lower_bound, self.candidate_child_vars)
 		return node_left, node_right
 
 	def choice_branch(self, candidate_vars: list):
@@ -161,41 +178,63 @@ def choice_node(candidate_node: list) -> tuple[Node, list]:
 	node = candidate_node.pop(0)
 	return node, candidate_node
 
-def Main():
-	n = 10
-	S = 3
-	G = Graph(n)
-
+def createIP(n, S, G):
 	## TODO
 	model = gp.Model('Clique Partition')
-	x = model.addVars(1, name='x', vtype=GRB.BINARY, obj=G.weight())
-	# model.setObjective()
+	n0 = 10 if n > 10 else n
+	P0 = list(itertools.combinations(list(range(n0)), S))
+	P1 = []
+	for comb in P0:
+		P = [0] * n
+		for i in comb:
+			P[i] = 1
+		P1.append(P)
+	x = []
+	for i in range(len(P1)):
+		x.append(model.addVar(vtype=GRB.BINARY, obj=G.weight(P1[i]), name='x'+str(i)))
+		# x.append(model.addVar(lb=0, ub=1, obj=G.weight(P1[i]), vtype=GRB.CONTINUOUS, name='x'+str(i)))
 	model.addConstrs(
-		gp.quicksum(x[i] for i in range(len(x))) == 1 for _ in range(G.n)
+		gp.quicksum(x[i] * P1[i][j] for i in range(len(x))) == 1 for j in range(n)
 	)
+	return model
+
+def Main():
+	n = 10
+	S = 5
+	gap = 1
+	G = Graph(n)
+
+	model = createIP(n, S, G)
 	model.optimize()
 	model.write('model_integer.lp')
 
 	subprob = PriceIP(G, S)
 	subprob.create_model()
 
-	upper_bound, lower_bound = float('inf'), 0.0
+	upper_bound, lower_bound = float('inf'), G.weight()
 	model_relax = model.relax()
-	root_node = Node(model=model_relax, upper_bound=upper_bound, lower_bound=lower_bound, candidate_vars=[0])
+	root_node = Node(model=model_relax, upper_bound=upper_bound, lower_bound=lower_bound, candidate_vars=list(range(len(model.getVars()))))
 	candidate_node = [root_node]
 	current_optimum = None
+	bestmodel = model_relax
 
 	while candidate_node:
 		node, candidate_node = choice_node(candidate_node)
 		if node.upper_bound <= lower_bound:
-			print('prune by bound', "node.upper_bound <= lower_bound")
+			print('prune by bound')
 			continue
+
 		model_status = node.optimize(heuristic_solve)
+		# print('LOG: generate_columns_with_gurobi')
+		# node.generate_columns_with_gurobi(G, subprob)
+
 		if model_status == 'infeasible':
 			print('prune by infeasibility')
 			continue
+
+		print('LOG: update_lower_bound')
 		node.update_lower_bound()
-		if node.lower_bound >= lower_bound:
+		if node.upper_bound <= lower_bound:
 			print('prune by bound')
 			continue
 		if node.is_integer():
@@ -203,17 +242,20 @@ def Main():
 			if node.upper_bound < upper_bound:
 				upper_bound = node.upper_bound
 				current_optimum = node.solution
+				bestmodel = node.model
 			continue
 
-		node.generate_columns_with_gurobi(G, subprob)
-
 		if node.is_child_problem():
-			child_node1, child_node2 = node.get_child_problem(subprob)
+			child_node1, child_node2 = node.get_child_problem()
 			candidate_node.append(child_node1)
 			candidate_node.append(child_node2)
 	
 	print('lower bound: ', lower_bound)
 	print('optimum: ', current_optimum)
+	bestx = bestmodel.getVars()
+	for x in bestx:
+		if x.X == 1.0:
+			print(bestmodel.getCol(x))
 
 if __name__ == '__main__':
 	Main()
