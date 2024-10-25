@@ -1,6 +1,7 @@
 #!/bin/python3
 # vim:ts=2:sw=2:noet
 import itertools
+from math import ceil
 import numpy
 import gurobipy
 from gurobipy import GRB
@@ -9,17 +10,6 @@ import colorama
 ############
 ## CPPMIN ##
 ############
-
-def subset(A: list, B: list) -> bool:
-	a = set(A)
-	b = set(B)
-	return a.issubset(b)
-
-def union(A: list, B: list) -> list:
-	a = set(A)
-	b = set(B)
-	c = a.union(b)
-	return list(c)
 
 class graph:
 	def __init__(self, n: int) -> None:
@@ -54,6 +44,7 @@ class graph:
 		a = [1] * n
 		## edges
 		E = [ [ 0.0 for _ in range(n) ] for _ in range(n) ]
+		numpy.random.seed(40)
 		for i in range(n-1):
 			for j in range(i+1, n):
 				E[i][j] = E[j][i] = float(numpy.random.randint(100) + 1)
@@ -134,11 +125,15 @@ class MLP:
 
 	def get_dual_vars(self):
 		pi = [self.constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(self.constrs))]
-		return pi
+		sigma = self.constrs2.getAttr(GRB.Attr.Pi)
+		return pi, sigma
 
 	def __set_contrs(self) -> None:
 		self.constrs = self.model.addConstrs(
 			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) == 1 for _ in range(self.G.n)
+		)
+		self.constrs2 = self.model.addConstr(
+			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= ceil(self.G.n / self.S)
 		)
 
 	def __set_vars(self) -> None:
@@ -147,7 +142,8 @@ class MLP:
 		self.n_col = 1
 		self.columns = [[1] * self.G.n]
 
-	def update_contrs(self, column_coeff):
+	def update_contrs(self, column_coeff: list):
+		column_coeff.append(1)
 		column = gurobipy.Column(column_coeff, self.model.getConstrs())
 
 		## same column assertion
@@ -200,7 +196,7 @@ def solve():
 			exit()
 
 		## 5: Generate columns using an IP solver, if new columns are found goto 2
-		pi = cppmin.get_dual_vars()
+		pi, sigma = cppmin.get_dual_vars()
 		if pi in PI:
 			print(f'\n{colorama.Fore.RED}Encounter Error: Generate a same pi\n{colorama.Style.RESET_ALL}')
 			cppmin.write('Error.lp')
@@ -220,24 +216,15 @@ def solve():
 		print('Generate Column: ', y)
 		reduced_cost = sub_prob.get_reduced_cost()
 		print('reduced_cost: ', reduced_cost)
-		cppmin.update_contrs(column_coeff=y)
 
-		if reduced_cost >= 0:
+		if reduced_cost >= sigma:
 			break
+
+		cppmin.update_contrs(column_coeff=y)
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
 	cppmin.write()
-
-	def check_duplicate_column(model: gurobipy.Model):
-		vars = model.getVars()
-		columns = []
-		for var in vars:
-			column = model.getCol(var)
-		for column_coeff in columns:
-			print(column_coeff)
-
-	# check_duplicate_column(cppmin.model)
 
 if __name__ == '__main__':
 	solve()
