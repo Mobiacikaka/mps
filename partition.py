@@ -77,12 +77,22 @@ class SUB:
 	def create_model(self) -> None:
 		self.model = gurobipy.Model('sub model')
 		self.y = self.model.addVars(self.G.n, vtype=GRB.BINARY, name='y')
+		self.z = []
+		for i in range(self.G.n-1):
+			zz = []
+			for j in range(i+1, self.G.n):
+				zz.append(self.model.addVar(vtype=GRB.CONTINUOUS, lb=0, name=f'z{i},{j}'))
+			self.z.append(zz)
+
 		self.model.addConstr( (gurobipy.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
+		for i in range(self.G.n-1):
+			for j in range(i+1, self.G.n):
+				self.model.addConstr(self.z[i][j-i-1] >= self.y[i] + self.y[j] - 1)
 
 	def set_objective(self, pi: list):
 		self.model.setObjective(
 			- gurobipy.quicksum(pi[i] * self.y[i] for i in range(self.G.n))
-			+ gurobipy.quicksum( (self.G.E[i][j] * self.y[i] * self.y[j]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
+			+ gurobipy.quicksum( (self.G.E[i][j] * self.z[i][j-i-1]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
 			, sense=GRB.MINIMIZE
 		)
 
@@ -171,7 +181,7 @@ def solve():
 	MAX_ITER_TIMES = 10000
 
 	## number of vertex
-	n = 12
+	n = 10
 	## least number of cluster
 	S = 3
 	G = graph(n)
@@ -194,9 +204,9 @@ def solve():
 		if pi in PI:
 			print(f'\n{colorama.Fore.RED}Encounter Error: Generate a same pi\n{colorama.Style.RESET_ALL}')
 			cppmin.write('Error.lp')
-			for p in PI:
-				print(f'{colorama.Fore.RED}{p}{colorama.Style.RESET_ALL}')
-			print(f'\n{colorama.Fore.RED}{pi}{colorama.Style.RESET_ALL}')
+			# for p in PI:
+			# 	print(f'{colorama.Fore.RED}{p}{colorama.Style.RESET_ALL}')
+			# print(f'\n{colorama.Fore.RED}{pi}{colorama.Style.RESET_ALL}')
 			exit()
 		cppmin.write()
 
