@@ -4,6 +4,7 @@ import itertools
 import numpy
 import gurobipy
 from gurobipy import GRB
+import colorama
 
 ############
 ## CPPMIN ##
@@ -25,7 +26,7 @@ class graph:
 		self.n = n
 		self.V, self.a, self.E = self.__createGraph__(self.n)
 		self.__printGraph__()
-		self.__sortEdge__()
+		# self.__sortEdge__()
 		# self.__printGraph__()
 
 	def __sortEdge__(self) -> None:
@@ -75,16 +76,13 @@ class SUB:
 
 	def create_model(self) -> None:
 		self.model = gurobipy.Model('sub model')
-		self.y = self.model.addVars(self.G.n, lb=0, ub=1, vtype=GRB.INTEGER, name='y')
+		self.y = self.model.addVars(self.G.n, vtype=GRB.BINARY, name='y')
 		self.model.addConstr( (gurobipy.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
-
-	def weight(self, subgraph):
-		return gurobipy.quicksum( (self.G.E[i][j] * subgraph[i] * subgraph[j]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
 
 	def set_objective(self, pi: list):
 		self.model.setObjective(
 			- gurobipy.quicksum(pi[i] * self.y[i] for i in range(self.G.n))
-			+ self.weight(self.y)
+			+ gurobipy.quicksum( (self.G.E[i][j] * self.y[i] * self.y[j]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
 			, sense=GRB.MINIMIZE
 		)
 
@@ -93,7 +91,7 @@ class SUB:
 		self.model.optimize()
 
 	def get_solution(self):
-		return [self.model.getVars()[i].x for i in range(self.G.n)]
+		return [int(self.model.getVars()[i].X) for i in range(self.G.n)]
 
 	def get_reduced_cost(self):
 		return self.model.ObjVal
@@ -105,6 +103,8 @@ class MLP:
 	def __init__(self, G: graph, S: int) -> None:
 		self.G = G
 		self.S = S
+		self.n_col = 0 ##
+		self.n_dim = 0 ## 变量数量
 
 	def create_model(self):
 		self.x = []
@@ -133,15 +133,26 @@ class MLP:
 
 	def __set_vars(self) -> None:
 		self.x.append(self.model.addVar(obj=self.G.weight(), lb=0, ub=1, vtype=GRB.CONTINUOUS, name='x0'))
-		self.n_dim = len(self.x)
+		self.n_dim = 1
 		self.n_col = 1
+		self.columns = [[1] * self.G.n]
 
 	def update_contrs(self, column_coeff):
-		self.column = gurobipy.Column(column_coeff, self.model.getConstrs())
+		column = gurobipy.Column(column_coeff, self.model.getConstrs())
+
+		## same column assertion
+		if column_coeff in self.columns:
+			print(f'\n{colorama.Fore.RED}Encounter Error: Generated a same column!\n{colorama.Style.RESET_ALL}\n')
+		# assert(column_coeff not in self.columns), "Generated a same column"
+		self.columns.append(column_coeff)
+
 		self.model.addVar(
-			vtype=GRB.CONTINUOUS, lb=0,
 			obj=self.G.weight(column_coeff),
-			name='x'+str(self.n_dim), column=self.column
+			lb=0,
+			ub=1,
+			vtype=GRB.CONTINUOUS,
+			name='x'+str(self.n_dim),
+			column=column
 		)
 		self.n_dim += 1
 		self.n_col += 1
@@ -151,16 +162,16 @@ class MLP:
 
 	def to_int(self):
 		for x in self.model.getVars():
-			x.setAttr('VType', GRB.INTEGER)
+			x.setAttr('VType', GRB.BINARY)
 
-	def write(self):
-		self.model.write('model.lp')
+	def write(self, filename='model.lp'):
+		self.model.write(filename)
 
 def solve():
 	MAX_ITER_TIMES = 10000
 
 	## number of vertex
-	n = 9
+	n = 12
 	## least number of cluster
 	S = 3
 	G = graph(n)
@@ -169,32 +180,54 @@ def solve():
 	cppmin.create_model()
 	sub_prob = SUB(G, S)
 	sub_prob.create_model()
+	PI = []
 
-	i = 0
-	# for i in range(MAX_ITER_TIMES):
 	while True:
-		if i % 100 == 0:
-			print('ITER TIMES:', i)
 		## 2: Approximately solve the current LP relaxation using CPLEX
 		cppmin.solve()
+		if cppmin.model.Status == GRB.INFEASIBLE:
+			print('INFEASIBLE')
+			exit()
 
 		## 5: Generate columns using an IP solver, if new columns are found goto 2
 		pi = cppmin.get_dual_vars()
+		if pi in PI:
+			print(f'\n{colorama.Fore.RED}Encounter Error: Generate a same pi\n{colorama.Style.RESET_ALL}')
+			cppmin.write('Error.lp')
+			for p in PI:
+				print(f'{colorama.Fore.RED}{p}{colorama.Style.RESET_ALL}')
+			print(f'\n{colorama.Fore.RED}{pi}{colorama.Style.RESET_ALL}')
+			exit()
 		cppmin.write()
+
+		PI.append(pi)
 		sub_prob.set_objective(pi)
 		sub_prob.solve()
-		y = sub_prob.get_solution()
-		reduced_cost = sub_prob.get_reduced_cost()
 		sub_prob.write()
-		cppmin.update_contrs(column_coeff=y)
 
 		## 6: If the gap between the value of the LP relaxation and the value of the incumbent integer solution is sufficiently small, STOP with optimality
+		y = sub_prob.get_solution()
+		print('Generate Column: ', y)
+		reduced_cost = sub_prob.get_reduced_cost()
+		print('reduced_cost: ', reduced_cost)
+		cppmin.update_contrs(column_coeff=y)
+
 		if reduced_cost >= 0:
 			break
-		i += 1
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
+	cppmin.write()
+
+	def check_duplicate_column(model: gurobipy.Model):
+		vars = model.getVars()
+		columns = []
+		for var in vars:
+			column = model.getCol(var)
+		for column_coeff in columns:
+			print(column_coeff)
+
+	# check_duplicate_column(cppmin.model)
 
 if __name__ == '__main__':
 	solve()
