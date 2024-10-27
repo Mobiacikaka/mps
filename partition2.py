@@ -199,8 +199,8 @@ def createIP(n, S, G):
 	return model
 
 def Main():
-	n = 10
-	S = 5
+	n = 5
+	S = 2
 	gap = 1
 	G = Graph(n)
 
@@ -220,13 +220,11 @@ def Main():
 
 	while candidate_node:
 		node, candidate_node = choice_node(candidate_node)
-		if node.upper_bound <= lower_bound:
+		if node.lower_bound <= upper_bound:
 			print('prune by bound')
 			continue
 
 		model_status = node.optimize(heuristic_solve)
-		# print('LOG: generate_columns_with_gurobi')
-		# node.generate_columns_with_gurobi(G, subprob)
 
 		if model_status == 'infeasible':
 			print('prune by infeasibility')
@@ -234,7 +232,7 @@ def Main():
 
 		print('LOG: update_lower_bound')
 		node.update_lower_bound()
-		if node.upper_bound <= lower_bound:
+		if node.lower_bound <= upper_bound:
 			print('prune by bound')
 			continue
 		if node.is_integer():
@@ -244,6 +242,9 @@ def Main():
 				current_optimum = node.solution
 				bestmodel = node.model
 			continue
+
+		print('LOG: generate_columns_with_gurobi')
+		node.generate_columns_with_gurobi(G, subprob)
 
 		if node.is_child_problem():
 			child_node1, child_node2 = node.get_child_problem()
@@ -256,6 +257,7 @@ def Main():
 	for x in bestx:
 		if x.X == 1.0:
 			print(bestmodel.getCol(x))
+	G.__printGraph__()
 
 if __name__ == '__main__':
 	Main()
