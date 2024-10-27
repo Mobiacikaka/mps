@@ -1,8 +1,7 @@
 #!/bin/python3
 # vim:ts=2:sw=2:noet
 import itertools
-from math import ceil
-import numpy
+import numpy, math
 import gurobipy
 from gurobipy import GRB
 import colorama
@@ -44,7 +43,6 @@ class graph:
 		a = [1] * n
 		## edges
 		E = [ [ 0.0 for _ in range(n) ] for _ in range(n) ]
-		numpy.random.seed(40)
 		for i in range(n-1):
 			for j in range(i+1, n):
 				E[i][j] = E[j][i] = float(numpy.random.randint(100) + 1)
@@ -127,13 +125,14 @@ class MLP:
 		pi = [self.constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(self.constrs))]
 		sigma = self.constrs2.getAttr(GRB.Attr.Pi)
 		return pi, sigma
+		return pi, 0
 
 	def __set_contrs(self) -> None:
 		self.constrs = self.model.addConstrs(
 			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) == 1 for _ in range(self.G.n)
 		)
 		self.constrs2 = self.model.addConstr(
-			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= ceil(self.G.n / self.S)
+			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= math.floor(self.G.n / self.S)
 		)
 
 	def __set_vars(self) -> None:
@@ -148,7 +147,8 @@ class MLP:
 
 		## same column assertion
 		if column_coeff in self.columns:
-			print(f'\n{colorama.Fore.RED}Encounter Error: Generated a same column!\n{colorama.Style.RESET_ALL}\n')
+			print(f'\n{colorama.Fore.RED}Encounter Error: Generated a same column!\nx{self.n_dim}:{column_coeff}{colorama.Style.RESET_ALL}\n')
+			# return
 		# assert(column_coeff not in self.columns), "Generated a same column"
 		self.columns.append(column_coeff)
 
@@ -177,9 +177,9 @@ def solve():
 	MAX_ITER_TIMES = 10000
 
 	## number of vertex
-	n = 10
+	n = 21
 	## least number of cluster
-	S = 3
+	S = 4
 	G = graph(n)
 
 	cppmin = MLP(G, S)
@@ -191,22 +191,20 @@ def solve():
 	while True:
 		## 2: Approximately solve the current LP relaxation using CPLEX
 		cppmin.solve()
+		cppmin.write()
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
 			exit()
 
 		## 5: Generate columns using an IP solver, if new columns are found goto 2
 		pi, sigma = cppmin.get_dual_vars()
+		# print('pi', pi, 'sigma', sigma)
 		if pi in PI:
 			print(f'\n{colorama.Fore.RED}Encounter Error: Generate a same pi\n{colorama.Style.RESET_ALL}')
-			cppmin.write('Error.lp')
-			# for p in PI:
-			# 	print(f'{colorama.Fore.RED}{p}{colorama.Style.RESET_ALL}')
-			# print(f'\n{colorama.Fore.RED}{pi}{colorama.Style.RESET_ALL}')
-			exit()
-		cppmin.write()
-
+			# cppmin.write('Error.lp')
+			# exit()
 		PI.append(pi)
+
 		sub_prob.set_objective(pi)
 		sub_prob.solve()
 		sub_prob.write()
@@ -215,9 +213,9 @@ def solve():
 		y = sub_prob.get_solution()
 		print('Generate Column: ', y)
 		reduced_cost = sub_prob.get_reduced_cost()
-		print('reduced_cost: ', reduced_cost)
+		print('reduced_cost: ', reduced_cost-sigma)
 
-		if reduced_cost >= sigma:
+		if reduced_cost >= sigma - 1e-6:
 			break
 
 		cppmin.update_contrs(column_coeff=y)
@@ -227,4 +225,5 @@ def solve():
 	cppmin.write()
 
 if __name__ == '__main__':
+	numpy.random.seed(0)
 	solve()
