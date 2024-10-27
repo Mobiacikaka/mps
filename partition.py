@@ -115,12 +115,6 @@ class MLP:
 		self.model.Params.OutputFlag = flag
 		self.model.optimize()
 
-		if flag == 1:
-			for x in self.model.getVars():
-				# print(x.VarName, '=', x.X)
-				if x.X == 1.0:
-					print(self.model.getCol(x))
-
 	def get_dual_vars(self):
 		pi = [self.constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(self.constrs))]
 		sigma = self.constrs2.getAttr(GRB.Attr.Pi)
@@ -136,7 +130,7 @@ class MLP:
 		)
 
 	def __set_vars(self) -> None:
-		self.x.append(self.model.addVar(obj=self.G.weight(), lb=0, ub=1, vtype=GRB.CONTINUOUS, name='x0'))
+		self.x.append(self.model.addVar(obj=self.G.weight(), lb=0, vtype=GRB.CONTINUOUS, name='x0'))
 		self.n_dim = 1
 		self.n_col = 1
 		self.columns = [[1] * self.G.n]
@@ -155,7 +149,6 @@ class MLP:
 		self.model.addVar(
 			obj=self.G.weight(column_coeff),
 			lb=0,
-			ub=1,
 			vtype=GRB.CONTINUOUS,
 			name='x'+str(self.n_dim),
 			column=column
@@ -179,7 +172,7 @@ def solve():
 	## number of vertex
 	n = 21
 	## least number of cluster
-	S = 4
+	S = 5
 	G = graph(n)
 
 	cppmin = MLP(G, S)
@@ -195,6 +188,11 @@ def solve():
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
 			exit()
+		else:
+			for x in cppmin.model.getVars():
+				if x.X != 0.0:
+					print(f'{x.VarName}={x.X}', end='\t')
+			print('\n')
 
 		## 5: Generate columns using an IP solver, if new columns are found goto 2
 		pi, sigma = cppmin.get_dual_vars()
@@ -222,8 +220,11 @@ def solve():
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
+	for x in cppmin.model.getVars():
+		if x.X == 1.0:
+			print(x.VarName, '\t:\t', cppmin.model.getCol(x))
 	cppmin.write()
 
 if __name__ == '__main__':
-	numpy.random.seed(0)
+	# numpy.random.seed(0)
 	solve()
