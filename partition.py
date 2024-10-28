@@ -119,7 +119,6 @@ class MLP:
 		pi = [self.constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(self.constrs))]
 		sigma = self.constrs2.getAttr(GRB.Attr.Pi)
 		return pi, sigma
-		return pi, 0
 
 	def __set_contrs(self) -> None:
 		self.constrs = self.model.addConstrs(
@@ -140,10 +139,7 @@ class MLP:
 		column = gurobipy.Column(column_coeff, self.model.getConstrs())
 
 		## same column assertion
-		if column_coeff in self.columns:
-			print(f'\n{colorama.Fore.RED}Encounter Error: Generated a same column!\nx{self.n_dim}:{column_coeff}{colorama.Style.RESET_ALL}\n')
-			# return
-		# assert(column_coeff not in self.columns), "Generated a same column"
+		assert(column_coeff not in self.columns), "Generated a same column"
 		self.columns.append(column_coeff)
 
 		self.model.addVar(
@@ -167,12 +163,10 @@ class MLP:
 		self.model.write(filename)
 
 def solve():
-	MAX_ITER_TIMES = 10000
-
 	## number of vertex
-	n = 21
+	n = 29
 	## least number of cluster
-	S = 5
+	S = 7
 	G = graph(n)
 
 	cppmin = MLP(G, S)
@@ -188,19 +182,11 @@ def solve():
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
 			exit()
-		else:
-			for x in cppmin.model.getVars():
-				if x.X != 0.0:
-					print(f'{x.VarName}={x.X}', end='\t')
-			print('\n')
 
 		## 5: Generate columns using an IP solver, if new columns are found goto 2
 		pi, sigma = cppmin.get_dual_vars()
 		# print('pi', pi, 'sigma', sigma)
-		if pi in PI:
-			print(f'\n{colorama.Fore.RED}Encounter Error: Generate a same pi\n{colorama.Style.RESET_ALL}')
-			# cppmin.write('Error.lp')
-			# exit()
+		assert(pi not in PI), 'Generated a same pi'
 		PI.append(pi)
 
 		sub_prob.set_objective(pi)
@@ -211,19 +197,20 @@ def solve():
 		y = sub_prob.get_solution()
 		print('Generate Column: ', y)
 		reduced_cost = sub_prob.get_reduced_cost()
-		print('reduced_cost: ', reduced_cost-sigma)
+		print('reduced_cost-sigma: ', reduced_cost-sigma)
 
-		if reduced_cost >= sigma - 1e-6:
+		# if reduced_cost >= sigma - 1e-6:
+		if reduced_cost - sigma >= 0:
 			break
 
 		cppmin.update_contrs(column_coeff=y)
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
+	cppmin.write()
 	for x in cppmin.model.getVars():
 		if x.X == 1.0:
 			print(x.VarName, '\t:\t', cppmin.model.getCol(x))
-	cppmin.write()
 
 if __name__ == '__main__':
 	# numpy.random.seed(0)
