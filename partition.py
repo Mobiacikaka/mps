@@ -205,12 +205,19 @@ def solve():
 
 		cppmin.update_contrs(column_coeff=y)
 
+	print()
+	for x in cppmin.model.getVars():
+		if x.X != 0.0:
+			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
+
 	cppmin.to_int()
 	cppmin.solve(flag=1)
 	cppmin.write()
+
+	print()
 	for x in cppmin.model.getVars():
 		if x.X == 1.0:
-			print(x.VarName, '\t:\t', cppmin.model.getCol(x))
+			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
 
 if __name__ == '__main__':
 	# numpy.random.seed(0)
