@@ -1,7 +1,7 @@
 #!/bin/python3
 # vim:ts=2:sw=2:noet
 import itertools
-import numpy, math
+import numpy, math, time
 import gurobipy
 from gurobipy import GRB
 import colorama
@@ -175,9 +175,17 @@ def solve():
 	sub_prob.create_model()
 	PI = []
 
+	time_master = 0.0
+	time_subprob = 0.0
+
 	while True:
 		## 2: Approximately solve the current LP relaxation using CPLEX
+
+		time_start = time.time()
 		cppmin.solve()
+		time_end = time.time()
+		time_master += time_end - time_start
+
 		cppmin.write()
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
@@ -190,7 +198,12 @@ def solve():
 		PI.append(pi)
 
 		sub_prob.set_objective(pi)
+
+		time_start = time.time()
 		sub_prob.solve()
+		time_end = time.time()
+		time_subprob += time_end - time_start
+
 		sub_prob.write()
 
 		## 6: If the gap between the value of the LP relaxation and the value of the incumbent integer solution is sufficiently small, STOP with optimality
@@ -219,6 +232,8 @@ def solve():
 		if x.X == 1.0:
 			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
 
+	print(time_master, time_subprob)
+
 if __name__ == '__main__':
-	# numpy.random.seed(0)
+	numpy.random.seed(60)
 	solve()

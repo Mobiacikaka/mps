@@ -1,4 +1,4 @@
-import itertools
+import itertools, math
 import gurobipy as gp
 from gurobipy import GRB
 import numpy
@@ -56,16 +56,23 @@ class PriceIP:
 
 	def create_model(self) -> None:
 		self.model = gp.Model('sub model')
-		self.y = self.model.addVars(self.G.n, lb=0, ub=1, vtype=GRB.INTEGER, name='y')
-		self.model.addConstr( (gp.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
+		self.y = self.model.addVars(self.G.n, vtype=GRB.BINARY, name='y')
+		self.z = []
+		for i in range(self.G.n-1):
+			zz = []
+			for j in range(i+1, self.G.n):
+				zz.append(self.model.addVar(vtype=GRB.CONTINUOUS, lb=0, name=f'z{i},{j}'))
+			self.z.append(zz)
 
-	def weight(self, subgraph):
-		return gp.quicksum( (self.G.E[i][j] * subgraph[i] * subgraph[j]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
+		self.model.addConstr( (gp.quicksum(self.G.a[i] * self.y[i] for i in range(self.G.n)) >= self.S) )
+		for i in range(self.G.n-1):
+			for j in range(i+1, self.G.n):
+				self.model.addConstr(self.z[i][j-i-1] >= self.y[i] + self.y[j] - 1)
 
 	def set_objective(self, pi: list):
 		self.model.setObjective(
 			- gp.quicksum(pi[i] * self.y[i] for i in range(self.G.n))
-			+ self.weight(self.y)
+			+ gp.quicksum( (self.G.E[i][j] * self.z[i][j-i-1]) for i in range(self.G.n-1) for j in range(i+1, self.G.n) )
 			, sense=GRB.MINIMIZE
 		)
 
@@ -74,7 +81,7 @@ class PriceIP:
 		self.model.optimize()
 
 	def get_solution(self):
-		return [self.model.getVars()[i].x for i in range(self.G.n)]
+		return [int(self.model.getVars()[i].X) for i in range(self.G.n)]
 
 	def get_reduced_cost(self):
 		return self.model.ObjVal
@@ -114,19 +121,24 @@ class Node:
 			return True
 		return False
 
-	def generate_columns_with_gurobi(self, G, subprob: PriceIP):
-		constrs = self.model.getConstrs()
+	def generate_columns_with_gurobi(self, G: Graph, subprob: PriceIP):
 		try:
-			pi = [constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(constrs))]
+			pi = [self.model.getConstrs()[i].getAttr(GRB.Attr.Pi) for i in range(G.n)]
+			sigma = self.model.getConstrs()[-1].getAttr(GRB.Attr.Pi)
 		except:
 			self.model.write('error.lp')
 			print('\nExit with error: Cannot acquire pi')
 			exit(0)
+
 		subprob.set_objective(pi)
 		subprob.solve()
-		y = subprob.get_solution()
-		# reduced_cost = subprob.get_reduced_cost()
 		subprob.write()
+
+		y = subprob.get_solution()
+		print('Generate Column: ', y)
+		reduced_cost = subprob.get_reduced_cost()
+		print('reduced_cost-sigma: ', reduced_cost-sigma)
+
 		column = None
 		try:
 			column = gp.Column(y, self.model.getConstrs())
@@ -147,7 +159,6 @@ class Node:
 		branch_index, self.candidate_child_vars = self.choice_branch(self.candidate_vars)
 		try:
 			self.child_left.addConstr(self.child_left.getVars()[branch_index] == 0)
-			self.child_left.write('child_left.lp')
 			self.child_right.addConstr(self.child_right.getVars()[branch_index] == 1)
 		except:
 			print('candidate_vars', self.candidate_vars)
@@ -178,30 +189,36 @@ def choice_node(candidate_node: list) -> tuple[Node, list]:
 	node = candidate_node.pop(0)
 	return node, candidate_node
 
-def createIP(n, S, G):
+def createIP(n: int, S: int, G: Graph):
 	## TODO
 	model = gp.Model('Clique Partition')
-	n0 = 10 if n > 10 else n
-	P0 = list(itertools.combinations(list(range(n0)), S))
-	P1 = []
-	for comb in P0:
-		P = [0] * n
-		for i in comb:
-			P[i] = 1
-		P1.append(P)
-	x = []
-	for i in range(len(P1)):
-		x.append(model.addVar(vtype=GRB.BINARY, obj=G.weight(P1[i]), name='x'+str(i)))
-		# x.append(model.addVar(lb=0, ub=1, obj=G.weight(P1[i]), vtype=GRB.CONTINUOUS, name='x'+str(i)))
+	# n0 = 10 if n > 10 else n
+	# P0 = list(itertools.combinations(list(range(n0)), S))
+	# P1 = []
+	# for comb in P0:
+	# 	P = [0] * n
+	# 	for i in comb:
+	# 		P[i] = 1
+	# 	P1.append(P)
+	# x = []
+	# for i in range(len(P1)):
+	# 	x.append(model.addVar(vtype=GRB.BINARY, obj=G.weight(P1[i]), name='x'+str(i)))
+	# 	# x.append(model.addVar(lb=0, ub=1, obj=G.weight(P1[i]), vtype=GRB.CONTINUOUS, name='x'+str(i)))
+	# model.addConstrs(
+	# 	gp.quicksum(x[i] * P1[i][j] for i in range(len(x))) == 1 for j in range(n)
+	# )
+	x0 = model.addVar(vtype=GRB.BINARY, obj=G.weight(), name='x0')
 	model.addConstrs(
-		gp.quicksum(x[i] * P1[i][j] for i in range(len(x))) == 1 for j in range(n)
+		x0 == 1 for _ in range(n)
+	)
+	model.addConstr(
+		x0 <= math.floor(n / S)
 	)
 	return model
 
 def Main():
 	n = 5
 	S = 2
-	gap = 1
 	G = Graph(n)
 
 	model = createIP(n, S, G)
@@ -213,7 +230,7 @@ def Main():
 
 	upper_bound, lower_bound = float('inf'), G.weight()
 	model_relax = model.relax()
-	root_node = Node(model=model_relax, upper_bound=upper_bound, lower_bound=lower_bound, candidate_vars=list(range(len(model.getVars()))))
+	root_node = Node(model=model_relax, upper_bound=upper_bound, lower_bound=lower_bound, candidate_vars=[0])
 	candidate_node = [root_node]
 	current_optimum = None
 	bestmodel = model_relax
