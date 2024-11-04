@@ -69,8 +69,8 @@ def choice_node(candidate_node: list) -> tuple[Node, list[Node]]:
 
 def ColumnGeneration() -> gp.Model:
 	## 1. Initialize
-	n = 29
-	S = 7
+	n = 21
+	S = 5
 
 	G = Graph(n)
 	G.PrintGraph()
@@ -125,9 +125,6 @@ def solve():
 	master_problem = master_problem_int.relax()
 	for x in master_problem.getVars():
 		x.setAttr('ub', float('inf'))
-	master_problem.write('Node0.lp')
-	master_problem.optimize()
-	print(master_problem.ObjVal)
 
 	## Branching
 	upper_bound, lower_bound = float('inf'), 0
@@ -145,6 +142,9 @@ def solve():
 	while candidate_node:
 		node, candidate_node = choice_node(candidate_node)
 		print('node', node.name)
+		# node.write(f'Node{node_num}.lp')
+		node_num += 1
+
 		if node.lower_bound >= upper_bound:
 			print('prune by bound')
 			continue
@@ -160,10 +160,6 @@ def solve():
 			print('prune by bound')
 			continue
 
-		# node.write(f'Node{node_num}.lp')
-		node_num += 1
-		# print('upper_bound: ', node.upper_bound)
-		# print('lower_bound: ', node.lower_bound)
 		if node.is_integer():
 			node.update_upper_bound()
 			if node.upper_bound < upper_bound:
