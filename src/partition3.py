@@ -12,16 +12,13 @@ def heuristic_solve(problem: gp.Model):
 		return None, None
 	return problem.ObjVal, problem.getVars()
 
-def choice_node(candidate_node: list):
-	node = candidate_node.pop(0)
-	return node, candidate_node
-
 class Node:
-	def __init__(self, model: gp.Model, lower_bound: float, upper_bound: float, candidate_vars: list) -> None:
+	def __init__(self, model: gp.Model, lower_bound: float, upper_bound: float, candidate_vars: list, name='') -> None:
 		self.model = model
 		self.lower_bound = lower_bound
 		self.upper_bound = upper_bound
 		self.candidate_vars = candidate_vars
+		self.name = name
 
 	def optimize(self, solve):
 		self.obj_values, self.solution = solve(self.model)
@@ -54,8 +51,8 @@ class Node:
 		branch_index, self.candidate_child_vars = self.choice_branch()
 		self.child_left.addConstr(self.child_left.getVars()[branch_index] == 0)
 		self.child_right.addConstr(self.child_right.getVars()[branch_index] == 1)
-		node_left = Node(self.child_left, self.lower_bound, self.upper_bound, self.candidate_child_vars)
-		node_right = Node(self.child_right, self.lower_bound, self.upper_bound, self.candidate_child_vars)
+		node_left = Node(self.child_left, self.lower_bound, self.upper_bound, self.candidate_child_vars, self.name+'0')
+		node_right = Node(self.child_right, self.lower_bound, self.upper_bound, self.candidate_child_vars, self.name+'1')
 		return node_left, node_right
 
 	def choice_branch(self):
@@ -63,8 +60,12 @@ class Node:
 		branch_index = self.candidate_child_vars.pop(0)
 		return branch_index, self.candidate_child_vars
 
-	def write(self):
-		self.model.write('model.lp')
+	def write(self, filename='model.lp'):
+		self.model.write(filename)
+
+def choice_node(candidate_node: list) -> tuple[Node, list[Node]]:
+	node = candidate_node.pop(0)
+	return node, candidate_node
 
 def ColumnGeneration() -> gp.Model:
 	## 1. Initialize
@@ -122,6 +123,9 @@ def solve():
 
 	master_problem_int = gp.read('model_read.lp')
 	master_problem = master_problem_int.relax()
+	for x in master_problem.getVars():
+		x.setAttr('ub', float('inf'))
+	master_problem.write('Node0.lp')
 	master_problem.optimize()
 	print(master_problem.ObjVal)
 
@@ -136,8 +140,11 @@ def solve():
 	candidate_node = [root_node]
 	current_optimun = None
 
+	node_num = 0
+
 	while candidate_node:
 		node, candidate_node = choice_node(candidate_node)
+		print('node', node.name)
 		if node.lower_bound >= upper_bound:
 			print('prune by bound')
 			continue
@@ -147,13 +154,16 @@ def solve():
 			print('prune by infeasibility')
 			continue
 
+		# print(node.candidate_vars)
 		node.update_lower_bound()
 		if node.lower_bound >= upper_bound:
 			print('prune by bound')
 			continue
 
-		print('upper_bound: ', upper_bound)
-		print('lower_bound: ', lower_bound)
+		# node.write(f'Node{node_num}.lp')
+		node_num += 1
+		# print('upper_bound: ', node.upper_bound)
+		# print('lower_bound: ', node.lower_bound)
 		if node.is_integer():
 			node.update_upper_bound()
 			if node.upper_bound < upper_bound:
