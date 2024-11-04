@@ -29,7 +29,7 @@ def solve():
 		time_end = time.time()
 		time_master += time_end - time_start
 
-		cppmin.write()
+		cppmin.write('model_linear.lp')
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
 			exit()
@@ -68,7 +68,7 @@ def solve():
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
-	cppmin.write()
+	cppmin.write('model_int.lp')
 
 	print()
 	for x in cppmin.model.getVars():
