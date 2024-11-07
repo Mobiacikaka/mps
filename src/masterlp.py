@@ -18,6 +18,7 @@ class MLP:
 	def solve(self, flag = 0):
 		self.model.Params.OutputFlag = flag
 		self.model.optimize()
+		return self.model.getVars()
 
 	def get_dual_vars(self):
 		pi = [self.constrs[i].getAttr(GRB.Attr.Pi) for i in range(len(self.constrs))]
@@ -39,6 +40,7 @@ class MLP:
 		self.columns = [[1] * self.G.n]
 
 	def update_contrs(self, column_coeff: list):
+		column_coeff = column_coeff.copy()
 		column_coeff.append(1)
 		column = gurobipy.Column(column_coeff, self.model.getConstrs())
 
