@@ -60,6 +60,8 @@ def solve():
 			break
 
 		cppmin.update_contrs(column_coeff=y)
+		# y = [1-x for x in y]
+		# cppmin.update_contrs(column_coeff=y)
 
 	print()
 	for x in cppmin.model.getVars():
