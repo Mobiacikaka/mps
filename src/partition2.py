@@ -1,22 +1,33 @@
-import numpy, time
+import numpy, time, heapq
+from itertools import combinations
 from gurobipy import GRB
 from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
 import gurobipy
 
+## A subset of B
+def subset(A: list, B: list) -> bool:
+	assert(len(A) == len(B))
+	for i in range(len(A)):
+		if A[i] == 1 and B[i] == 0:
+			return False
+	return True
+
+def CheckInequality(xlp: list[gurobipy.Var], clusters: list[list], Q: list, q: int) -> tuple[bool, float]:
+	s = 0.0
+	for p in range(len(clusters)):
+		P = clusters[p]
+		if subset(P, Q) == True:
+			s += xlp[p].X
+	if s <= q - 1:
+		return True, s ## valid
+	return False, s    ## invalid
+
 def GenerateQSET(model: gurobipy.Model, n, S):
 	xlp = model.getVars()
 	constrs = model.getConstrs()
 	column_coeff = [ [model.getCoeff(constr, x) for constr in constrs] for x in xlp]
-
-	## A subset of B
-	def subset(A: list, B: list) -> bool:
-		assert(len(A) == len(B))
-		for i in range(len(A)):
-			if A[i] == 1 and B[i] == 0:
-				return False
-		return True
 
 	QSet = []
 	for i in range(len(xlp)-1):
@@ -33,13 +44,32 @@ def GenerateQSET(model: gurobipy.Model, n, S):
 
 			## check inequality
 			q = sum(Q) // S + 1
-			for p in range(len(column_coeff)):
-				s = 0.0
-				if subset(column_coeff[p], Q) == True:
-					s += xlp[p].X
-				if s > q - 1:
-					QSet.append(Q)
+			if CheckInequality(xlp, column_coeff, Q, q)[0] == False: ## violated
+				QSet.append(Q)
 	return QSet
+
+def HeuristicI(G: Graph, S: int, model: gurobipy.Model):
+	xlp = model.getVars()
+	constrs = model.getConstrs()
+	column_coeff = [ [model.getCoeff(constr, x) for constr in constrs] for x in xlp]
+
+	for i in range(G.n):
+		## Find the closest 2S − 1 vertices to vertex i.
+		index = list(range(G.n))
+		index = sorted(index, key=lambda x: G.E[i][x])[:2*S]
+		## Enumerate all clusters of size S to 2S − 1 from these 2S vertices.
+		column_pool = []
+		for size in range(S, 2*S-1):
+			for cluster in combinations(index, size):
+				Q = [int(x in cluster) for x in range(G.n)]
+				q = sum(Q) // S + 1
+				flag, s = CheckInequality(xlp, column_coeff, Q, q)
+				if flag == False:
+					if len(column_pool) < 10:
+						column_pool.append((Q, s))
+					else:
+						## TODO
+						assert(0)
 
 def solve():
 	n = 21
