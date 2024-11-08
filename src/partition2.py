@@ -1,4 +1,4 @@
-import numpy, time, heapq
+import numpy, time, heapq, functools
 from itertools import combinations
 from gurobipy import GRB
 from graph import Graph
@@ -49,6 +49,11 @@ def GenerateQSET(model: gurobipy.Model, n, S):
 	return QSet
 
 def HeuristicI(G: Graph, S: int, model: gurobipy.Model):
+
+	class CompareClass(tuple):
+		def __lt__(self, other):
+			return self[1] < other[1]
+
 	xlp = model.getVars()
 	constrs = model.getConstrs()
 	column_coeff = [ [model.getCoeff(constr, x) for constr in constrs] for x in xlp]
@@ -66,10 +71,15 @@ def HeuristicI(G: Graph, S: int, model: gurobipy.Model):
 				flag, s = CheckInequality(xlp, column_coeff, Q, q)
 				if flag == False:
 					if len(column_pool) < 10:
-						column_pool.append((Q, s))
+						column_pool.append(CompareClass((Q, s)))
+					elif len(column_pool) == 10:
+						heapq.heapify(column_pool)
 					else:
-						## TODO
-						assert(0)
+						if s > column_pool[0][1]:
+							heapq.heappushpop(column_pool, CompareClass((Q, s)))
+
+	## Add the 10 most violating columns from the column pool
+	## with no more than 10 columns on the same vertex added.
 
 def solve():
 	n = 21
