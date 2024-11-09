@@ -68,10 +68,11 @@ def IPSolver(masterproblem: MLP, subproblem: SUB):
 	return True
 
 def HeuristicI(G: Graph, S: int, masterproblem: MLP):
+	print('LOG::USING HEURISTIC I')
+
 	model = masterproblem.model
 	xlp = model.getVars()
-	constrs = model.getConstrs()
-	column_coeff = [ [model.getCoeff(constr, x) for constr in constrs] for x in xlp]
+	columns = masterproblem.columns
 
 	column_pool = []
 	for i in range(G.n):
@@ -83,7 +84,7 @@ def HeuristicI(G: Graph, S: int, masterproblem: MLP):
 			for cluster in combinations(index, size):
 				Q = [int(x in cluster) for x in range(G.n)]
 				q = sum(Q) // S + 1
-				s = GetSumofQ(xlp, column_coeff, Q)
+				s = GetSumofQ(xlp, columns, Q)
 				if s > q-1:
 					if len(column_pool) < 10:
 						column_pool.append(CompareClass((Q, s)))
@@ -105,6 +106,7 @@ def HeuristicI(G: Graph, S: int, masterproblem: MLP):
 			if masterproblem.constrsLen[i] >= 10:
 				flag = False
 		if flag:
+			print('Generate Column: ', y)
 			masterproblem.update_contrs(y)
 
 	return True
