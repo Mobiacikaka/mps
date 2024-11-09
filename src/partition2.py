@@ -48,22 +48,22 @@ def GenerateQSET(model: gurobipy.Model, n, S):
 				QSet.append(Q)
 	return QSet
 
-def HeuristicI(G: Graph, S: int, model: gurobipy.Model):
+class CompareClass(tuple):
+	def __lt__(self, other):
+		return self[1] < other[1]
 
-	class CompareClass(tuple):
-		def __lt__(self, other):
-			return self[1] < other[1]
-
+def HeuristicI(G: Graph, S: int, masterproblem: MLP):
+	model = masterproblem.model
 	xlp = model.getVars()
 	constrs = model.getConstrs()
 	column_coeff = [ [model.getCoeff(constr, x) for constr in constrs] for x in xlp]
 
+	column_pool = []
 	for i in range(G.n):
 		## Find the closest 2S − 1 vertices to vertex i.
 		index = list(range(G.n))
 		index = sorted(index, key=lambda x: G.E[i][x])[:2*S]
 		## Enumerate all clusters of size S to 2S − 1 from these 2S vertices.
-		column_pool = []
 		for size in range(S, 2*S-1):
 			for cluster in combinations(index, size):
 				Q = [int(x in cluster) for x in range(G.n)]
@@ -80,6 +80,36 @@ def HeuristicI(G: Graph, S: int, model: gurobipy.Model):
 
 	## Add the 10 most violating columns from the column pool
 	## with no more than 10 columns on the same vertex added.
+	if len(column_pool) == 0:
+		return False
+
+	for y, _ in column_pool:
+		assert(len(y) == G.n)
+		flag = True
+		for i in range(G.n):
+			if masterproblem.constrsLen[i] >= 10:
+				flag = False
+		if flag:
+			masterproblem.update_contrs(y)
+
+	return True
+
+def IPSolver(masterproblem: MLP, subproblem: SUB):
+	pi, sigma = masterproblem.get_dual_vars()
+	subproblem.set_objective(pi)
+	subproblem.solve()
+	subproblem.write()
+
+	y = subproblem.get_solution()
+	print('Generate Column: ', y)
+	reduced_cost = subproblem.get_reduced_cost()
+	print('reduced_cost-sigma: ', reduced_cost-sigma)
+
+	if reduced_cost - sigma >= 0:
+		return False
+
+	masterproblem.update_contrs(y)
+	return True
 
 def solve():
 	n = 21
