@@ -38,15 +38,18 @@ class MLP:
 		self.n_dim = 1
 		self.n_col = 1
 		self.columns = [[1] * self.G.n]
+		self.constrsLen = [1] * self.G.n
 
 	def update_contrs(self, column_coeff: list):
-		column_coeff = column_coeff.copy()
-		column_coeff.append(1)
-		column = gurobipy.Column(column_coeff, self.model.getConstrs())
-
 		## same column assertion
 		assert(column_coeff not in self.columns), "Generated a same column"
 		self.columns.append(column_coeff)
+		for i in range(len(column_coeff)):
+			self.constrsLen[i] += column_coeff[i]
+
+		column_coeff = column_coeff.copy()
+		column_coeff.append(1)
+		column = gurobipy.Column(column_coeff, self.model.getConstrs())
 
 		self.model.addVar(
 			obj=self.G.Weight(column_coeff),
