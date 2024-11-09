@@ -1,4 +1,4 @@
-import numpy, time, heapq, functools, gurobipy
+import numpy
 from gurobipy import GRB
 
 import heuristic
@@ -26,9 +26,13 @@ def solve():
 			exit()
 
 		## Generate Q set
-		QSet = heuristic.GenerateQSET(cppmin, n, S)
+		# QSet = heuristic.GenerateQSET(cppmin, n, S)
 
-		## 5: Generate columns using an IP solver, if new columns are found goto 2
+		## 3: Generate columns using heuristic algorithms, if new columns are found goto 2.
+		if heuristic.HeuristicI(G, S, cppmin)   == True:
+			continue
+
+		## 5: Generate columns using an IP solver, if new columns are found goto 2.
 		if heuristic.IPSolver(cppmin, sub_prob) == True: ## There is new column generated
 			continue
 
