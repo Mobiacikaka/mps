@@ -1,4 +1,4 @@
-import numpy
+import numpy, colorama
 from gurobipy import GRB
 
 import heuristic
@@ -29,8 +29,8 @@ def solve():
 		# QSet = heuristic.GenerateQSET(cppmin, n, S)
 
 		## 3: Generate columns using heuristic algorithms, if new columns are found goto 2.
-		if heuristic.HeuristicI(G, S, cppmin)   == True:
-			continue
+		# if heuristic.HeuristicI(G, S, cppmin)   == True:
+		# 	continue
 
 		## 5: Generate columns using an IP solver, if new columns are found goto 2.
 		if heuristic.IPSolver(cppmin, sub_prob) == True: ## There is new column generated
@@ -50,6 +50,40 @@ def solve():
 	cppmin.solve(flag=1)
 	cppmin.write('model_int.lp')
 
+def SolveNode(G: Graph, S: int):
+	mlp = MLP(G, S) ## Master Linear Problem
+	mlp.create_model()
+	pip = SUB(G, S) ## Price Integer Problem
+	pip.create_model()
+
+	while True:
+		mlp.solve()
+		mlp.write('master.lp')
+		if mlp.model.Status == GRB.INFEASIBLE:
+			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
+			exit()
+
+		if heuristic.IPSolver(mlp, pip) == True:
+			continue
+
+		break
+
+	return mlp
+
+def BranchAndPrice(n: int, S: int):
+	OriginalGraph = Graph(n)
+	OriginalGraph.PrintGraph()
+
+	GraphQueue = [OriginalGraph]
+
+	while len(GraphQueue):
+		G = GraphQueue.pop(0)
+		mlp = SolveNode(G, S)
+
+		## TODO: Branching
+		if mlp.is_int():
+			assert(0)
+
 if __name__ == '__main__':
-	numpy.random.seed(60)
+	numpy.random.seed(50)
 	solve()

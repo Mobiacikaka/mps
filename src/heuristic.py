@@ -1,4 +1,4 @@
-import gurobipy, heapq
+import gurobipy, heapq, colorama
 from itertools import combinations
 
 from masterlp import MLP
@@ -103,10 +103,10 @@ def HeuristicI(G: Graph, S: int, masterproblem: MLP):
 		assert(len(y) == G.n)
 		flag = True
 		for i in range(G.n):
-			if masterproblem.constrsLen[i] >= 10:
+			if y[i] == 1 and masterproblem.constrsLen[i] >= 10:
 				flag = False
 		if flag:
-			print('Generate Column: ', y)
+			print(f'{colorama.Fore.RED}Generate Column: {y}{colorama.Style.RESET_ALL}')
 			masterproblem.update_contrs(y)
 
 	return True

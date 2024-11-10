@@ -68,6 +68,12 @@ class MLP:
 		for x in self.model.getVars():
 			x.setAttr('VType', GRB.BINARY)
 
+	def is_int(self):
+		for x in self.model.getVars():
+			if x.X != 0.0 or x.X != 1.0:
+				return False
+		return True
+
 	def write(self, filename='model.lp'):
 		self.model.write(filename)
 
