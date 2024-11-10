@@ -99,6 +99,7 @@ class Node:
 
 		self.mlp.solve()
 		self.obj_values = self.mlp.model.ObjVal
+		self.solution = self.mlp.model.getVars()
 		return self.mlp.model.Status
 
 	def update_lower_bound(self):
@@ -116,6 +117,33 @@ class Node:
 				return False
 		return True
 
+	def is_child_problem(self) -> bool:
+		## TODO
+		self.vi = 0
+		self.vj = 0
+		for xP1 in range(self.G.n-1):
+			if self.solution[xP1].X == 0.0 or self.solution[xP1].X == 1.0:
+				continue
+			for xP2 in range(xP1+1, self.G.n):
+				if self.solution[xP2].X == 0.0 or self.solution[xP2].X == 1.0:
+					continue
+				for vi in range(self.G.n): ## vi is the vertice that in both clusters
+					if self.mlp.columns[xP1][vi] & self.mlp.columns[xP2][vi] == 1:
+						self.vi = vi
+						break
+				for vj in range(self.G.n): ## vj is the vertice that covered by only one cluster
+					if self.mlp.columns[xP1][vj] ^ self.mlp.columns[xP2][vj] == 1:
+						self.vj = vj
+						break
+				if self.vi < self.G.n and self.vj < self.G.n:
+					assert(self.vi != self.vj)
+					return True
+		return False
+
+	def get_child_problem(self):
+		self.model_left, self.model_right = self.mlp.model.copy(), self.mlp.model.copy()
+		assert(0)
+
 def BranchAndPrice(n: int, S: int):
 	OriginalGraph = Graph(n)
 	OriginalGraph.PrintGraph()
@@ -128,7 +156,7 @@ def BranchAndPrice(n: int, S: int):
 		lower_bound=lower_bound,
 	)
 	candidate_node = [root_node]
-	current_optimun = None
+	current_optimun = []
 
 	while candidate_node:
 		node = candidate_node.pop(0)
@@ -146,6 +174,24 @@ def BranchAndPrice(n: int, S: int):
 		if node.lower_bound >= upper_bound:
 			print('prune by bound')
 			continue
+
+		if node.is_integer():
+			node.update_upper_bound()
+			if node.upper_bound < upper_bound:
+				upper_bound = node.upper_bound
+				current_optimun = node.solution
+			continue
+
+		if node.is_child_problem():
+			child_left, child_right = node.get_child_problem()
+			candidate_node.append(child_left)
+			candidate_node.append(child_right)
+
+	print('upper_bound: ', upper_bound)
+	print('optimum: ', current_optimun)
+	for var in current_optimun:
+		if var.X == 1.0:
+			print(var.VarName)
 
 if __name__ == '__main__':
 	numpy.random.seed(50)
