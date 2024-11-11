@@ -6,9 +6,9 @@ from priceip import PriceIP as SUB
 
 def solve():
 	## number of vertex
-	n = 29
+	n = 21
 	## least number of cluster
-	S = 7
+	S = 4
 	G = Graph(n)
 	G.PrintGraph()
 
@@ -55,8 +55,8 @@ def solve():
 		reduced_cost = sub_prob.get_reduced_cost()
 		print('reduced_cost-sigma: ', reduced_cost-sigma)
 
-		# if reduced_cost >= sigma - 1e-6:
-		if reduced_cost - sigma >= 0:
+		if reduced_cost >= sigma - 1e-6:
+		# if reduced_cost - sigma >= 0:
 			break
 
 		cppmin.update_contrs(column_coeff=y)
