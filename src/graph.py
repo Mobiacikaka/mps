@@ -51,7 +51,6 @@ class Graph:
 
 	def Collapse(self, i: int, j: int):
 		## TODO
-		assert(0)
 		## pop V[j]
 		self.V.pop(j)
 		## add the weight of two vertex
@@ -61,6 +60,6 @@ class Graph:
 		for k in range(self.n):
 			self.E[i][k] = self.E[i][k] + self.E[i][j] + self.E[j][k]
 			self.E[k][i] = self.E[i][k]
-		self.E.pop(j)
 		for k in range(self.n):
 			self.E[k].pop(j)
+		self.E.pop(j)
