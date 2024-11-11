@@ -1,4 +1,4 @@
-import numpy, colorama
+import numpy, colorama, copy
 from gurobipy import GRB
 
 import heuristic
@@ -76,10 +76,12 @@ class Node:
 		self.S = S
 		self.upper_bound = upper_bound
 		self.lower_bound = lower_bound
+		self.mlp = None
 
 	def optimize(self):
 		## Create Model
-		self.mlp = MLP(self.G, self.S)
+		if self.mlp == None:
+			self.mlp = MLP(self.G, self.S)
 		self.mlp.create_model()
 		self.pip = SUB(self.G, self.S)
 		self.pip.create_model()
@@ -112,6 +114,7 @@ class Node:
 		assert(self.lower_bound <= self.upper_bound)
 
 	def is_integer(self):
+		assert(self.mlp != None)
 		for var in self.mlp.model.getVars():
 			if var.X > 0 and var.X < 1:
 				return False
@@ -141,8 +144,13 @@ class Node:
 		return False
 
 	def get_child_problem(self):
-		self.model_left, self.model_right = self.mlp.model.copy(), self.mlp.model.copy()
-		assert(0)
+		## TODO
+		G_Div, G_Cop = copy.deepcopy(self.G), copy.deepcopy(self.G)
+		G_Div.Divide(self.vi, self.vj)
+		G_Cop.Collapse(self.vi, self.vj)
+		Node_Div = Node(G_Div, self.S, self.upper_bound, self.lower_bound)
+		Node_Cop = Node(G_Cop, self.S, self.upper_bound, self.lower_bound)
+		return Node_Div, Node_Cop
 
 def BranchAndPrice(n: int, S: int):
 	OriginalGraph = Graph(n)
@@ -183,16 +191,16 @@ def BranchAndPrice(n: int, S: int):
 			continue
 
 		if node.is_child_problem():
-			child_left, child_right = node.get_child_problem()
-			candidate_node.append(child_left)
-			candidate_node.append(child_right)
+			Node_Div, Node_Cop = node.get_child_problem()
+			candidate_node.append(Node_Div)
+			candidate_node.append(Node_Cop)
 
 	print('upper_bound: ', upper_bound)
-	print('optimum: ', current_optimun)
+	# print('optimum: ', current_optimun)
 	for var in current_optimun:
 		if var.X == 1.0:
 			print(var.VarName)
 
 if __name__ == '__main__':
 	numpy.random.seed(50)
-	solve()
+	BranchAndPrice(11, 5)
