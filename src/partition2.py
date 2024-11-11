@@ -74,6 +74,8 @@ class Node:
 		self.S = S
 		self.upper_bound = upper_bound
 		self.lower_bound = lower_bound
+		self.vi = -1
+		self.vj = -1
 
 	def optimize(self):
 		## Create Model
@@ -118,12 +120,10 @@ class Node:
 		return True
 
 	def is_child_problem(self) -> bool:
-		## TODO
 		print('LOG::is_child_problem')
-		self.vi = 0
-		self.vj = 0
 		Vars = self.mlp.model.getVars()
 		for xP1 in range(len(Vars)-1):
+			self.vi = self.vj = -1
 			if Vars[xP1].X == 0.0 or Vars[xP1].X == 1.0:
 				continue
 			for xP2 in range(xP1+1, len(Vars)):
@@ -131,20 +131,19 @@ class Node:
 					continue
 				print(self.mlp.columns[xP1], self.mlp.columns[xP2])
 				for vi in range(self.G.n): ## vi is the vertice that in both clusters
-					if self.mlp.columns[xP1][vi] & self.mlp.columns[xP2][vi] == 1:
+					if self.mlp.columns[xP1][vi] + self.mlp.columns[xP2][vi] == 2:
 						self.vi = vi
 						break
 				for vj in range(self.G.n): ## vj is the vertice that covered by only one cluster
-					if self.mlp.columns[xP1][vj] ^ self.mlp.columns[xP2][vj] == 1:
+					if self.mlp.columns[xP1][vj] + self.mlp.columns[xP2][vj] == 1:
 						self.vj = vj
 						break
-				if self.vi < self.G.n and self.vj < self.G.n:
+				if self.vi < self.G.n and self.vj < self.G.n and self.vi >= 0 and self.vj >= 0:
 					assert(self.vi != self.vj)
 					return True
 		return False
 
 	def get_child_problem(self):
-		## TODO
 		print('LOG::get_child_problem')
 		G_Div, G_Cop = copy.deepcopy(self.G), copy.deepcopy(self.G)
 		G_Div.Divide(self.vi, self.vj)
@@ -207,5 +206,5 @@ def BranchAndPrice(n: int, S: int):
 			print(var.VarName)
 
 if __name__ == '__main__':
-	numpy.random.seed(5)
-	BranchAndPrice(15, 4)
+	numpy.random.seed(60)
+	BranchAndPrice(29, 7)
