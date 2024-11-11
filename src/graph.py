@@ -47,7 +47,7 @@ class Graph:
 
 	def Divide(self, i: int, j: int):
 		assert(i <= self.n and j <= self.n)
-		self.E[i][j] = self.E[j][i] = float('inf')
+		self.E[i][j] = self.E[j][i] = 200
 
 	def Collapse(self, i: int, j: int):
 		## TODO
@@ -63,3 +63,4 @@ class Graph:
 		for k in range(self.n):
 			self.E[k].pop(j)
 		self.E.pop(j)
+		self.n -= 1
