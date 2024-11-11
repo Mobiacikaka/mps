@@ -49,7 +49,7 @@ def GenerateQSET(masterproblem: MLP, n, S):
 	return QSet
 
 def IPSolver(masterproblem: MLP, subproblem: SUB):
-	print('LOG::USING IPSOLVER')
+	# print('LOG::USING IPSOLVER')
 
 	pi, sigma = masterproblem.get_dual_vars()
 	subproblem.set_objective(pi)
@@ -57,11 +57,11 @@ def IPSolver(masterproblem: MLP, subproblem: SUB):
 	subproblem.write()
 
 	y = subproblem.get_solution()
-	print('Generate Column: ', y)
+	# print('Generate Column: ', y)
 	reduced_cost = subproblem.get_reduced_cost()
-	print('reduced_cost-sigma: ', reduced_cost-sigma)
+	# print('reduced_cost-sigma: ', reduced_cost-sigma)
 
-	if reduced_cost - sigma >= 0:
+	if reduced_cost - sigma >= -1e-6:
 		return False
 
 	masterproblem.update_contrs(y)
