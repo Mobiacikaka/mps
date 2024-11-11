@@ -135,7 +135,7 @@ def solve():
 		candidate_vars=list(range(len(master_problem.getVars())))
 	)
 	candidate_node = [root_node]
-	current_optimun = None
+	current_optimun = []
 
 	node_num = 0
 
