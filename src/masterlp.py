@@ -68,9 +68,9 @@ class MLP:
 		for x in self.model.getVars():
 			x.setAttr('VType', GRB.BINARY)
 
-	def is_int(self):
+	def is_integer(self):
 		for x in self.model.getVars():
-			if x.X != 0.0 or x.X != 1.0:
+			if x.X > 0 and x.X < 1:
 				return False
 		return True
 
