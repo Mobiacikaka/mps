@@ -6,9 +6,7 @@ from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
 
-def solve():
-	n = 21
-	S = 5
+def solve(n: int, S: int):
 	G = Graph(n)
 	G.PrintGraph()
 
@@ -20,7 +18,7 @@ def solve():
 	while True:
 		## 2: Approximately solve the current LP relaxation using CPLEX
 		cppmin.solve()
-		cppmin.write('model_linear.lp')
+		cppmin.write('mlp.lp')
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
 			exit()
@@ -46,9 +44,9 @@ def solve():
 		if x.X != 0.0:
 			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
 
-	cppmin.to_int()
-	cppmin.solve(flag=1)
-	cppmin.write('model_int.lp')
+	if not cppmin.is_integer():
+		print('WARNING::There is only fractional solution!')
+		exit()
 
 def SolveNode(G: Graph, S: int):
 	mlp = MLP(G, S) ## Master Linear Problem
@@ -76,12 +74,10 @@ class Node:
 		self.S = S
 		self.upper_bound = upper_bound
 		self.lower_bound = lower_bound
-		self.mlp = None
 
 	def optimize(self):
 		## Create Model
-		if self.mlp == None:
-			self.mlp = MLP(self.G, self.S)
+		self.mlp = MLP(self.G, self.S)
 		self.mlp.create_model()
 		self.pip = SUB(self.G, self.S)
 		self.pip.create_model()
@@ -115,6 +111,7 @@ class Node:
 
 	def is_integer(self):
 		assert(self.mlp != None)
+		print('LOG::is_integer')
 		for var in self.mlp.model.getVars():
 			if var.X > 0 and var.X < 1:
 				return False
@@ -122,14 +119,17 @@ class Node:
 
 	def is_child_problem(self) -> bool:
 		## TODO
+		print('LOG::is_child_problem')
 		self.vi = 0
 		self.vj = 0
-		for xP1 in range(self.G.n-1):
-			if self.solution[xP1].X == 0.0 or self.solution[xP1].X == 1.0:
+		Vars = self.mlp.model.getVars()
+		for xP1 in range(len(Vars)-1):
+			if Vars[xP1].X == 0.0 or Vars[xP1].X == 1.0:
 				continue
-			for xP2 in range(xP1+1, self.G.n):
-				if self.solution[xP2].X == 0.0 or self.solution[xP2].X == 1.0:
+			for xP2 in range(xP1+1, len(Vars)):
+				if Vars[xP2].X == 0.0 or Vars[xP2].X == 1.0:
 					continue
+				print(self.mlp.columns[xP1], self.mlp.columns[xP2])
 				for vi in range(self.G.n): ## vi is the vertice that in both clusters
 					if self.mlp.columns[xP1][vi] & self.mlp.columns[xP2][vi] == 1:
 						self.vi = vi
@@ -145,6 +145,7 @@ class Node:
 
 	def get_child_problem(self):
 		## TODO
+		print('LOG::get_child_problem')
 		G_Div, G_Cop = copy.deepcopy(self.G), copy.deepcopy(self.G)
 		G_Div.Divide(self.vi, self.vj)
 		G_Cop.Collapse(self.vi, self.vj)
@@ -189,6 +190,10 @@ def BranchAndPrice(n: int, S: int):
 				upper_bound = node.upper_bound
 				current_optimun = node.solution
 			continue
+		else:
+			for var in node.mlp.model.getVars():
+				if var.X != 0.0:
+					print(f'{var.VarName}={var.X}\t{node.mlp.model.getCol(var)}')
 
 		if node.is_child_problem():
 			Node_Div, Node_Cop = node.get_child_problem()
@@ -202,5 +207,5 @@ def BranchAndPrice(n: int, S: int):
 			print(var.VarName)
 
 if __name__ == '__main__':
-	numpy.random.seed(50)
-	BranchAndPrice(11, 5)
+	numpy.random.seed(5)
+	BranchAndPrice(15, 4)
