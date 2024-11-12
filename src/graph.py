@@ -36,7 +36,7 @@ class Graph:
 		)
 
 	def PrintGraph(self, filename: str='Graph.txt'):
-		f = open(filename)
+		f = open(filename, 'w')
 		for edges in self.E:
 			for edge in edges:
 				print(str(edge), end='\t')
