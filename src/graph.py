@@ -1,5 +1,6 @@
 import numpy
 
+
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n

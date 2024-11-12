@@ -6,6 +6,7 @@ from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
 
+
 def solve():
 	n = 21
 	S = 5
@@ -52,4 +53,8 @@ def solve():
 
 if __name__ == '__main__':
 	numpy.random.seed(60)
-	solve()
+	BranchAndPrice(50, 7)
+	# numpy.random.seed(60)
+	# BranchAndPrice(29, 7)
+	# numpy.random.seed(5)
+	# BranchAndPrice(15, 4)
