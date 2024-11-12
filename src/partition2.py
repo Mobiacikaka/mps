@@ -193,6 +193,7 @@ def BranchAndPrice(n: int, S: int):
 				print('LOG::IS OPTIMUM')
 				upper_bound = node.upper_bound
 				current_optimun = node.solution
+				optimum_columns = []
 				for index in range(len(current_optimun)):
 					if current_optimun[index].X == 1.0:
 						optimum_columns.append(node.mlp.columns[index])
