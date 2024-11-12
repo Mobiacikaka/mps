@@ -35,22 +35,19 @@ class Graph:
 			for i in range(self.n-1) for j in range(i+1, self.n)]
 		)
 
-	def PrintGraph(self):
-		for v in self.V:
-			print(str(v), end='\t')
-		print('\nEdges:')
+	def PrintGraph(self, filename: str='Graph.txt'):
+		f = open(filename)
 		for edges in self.E:
 			for edge in edges:
 				print(str(edge), end='\t')
-			print()
-		print()
+				f.write(str(edge)+'\t')
+			f.write('\n')
 
 	def Divide(self, i: int, j: int):
 		assert(i <= self.n and j <= self.n)
 		self.E[i][j] = self.E[j][i] = 2**20
 
 	def Collapse(self, i: int, j: int):
-		## TODO
 		## pop V[j]
 		self.V.pop(j)
 		## add the weight of two vertex

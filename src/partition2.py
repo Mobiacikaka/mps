@@ -76,6 +76,7 @@ class Node:
 		self.lower_bound = lower_bound
 		self.vi = -1
 		self.vj = -1
+		self.collapse_comb = []
 
 	def optimize(self):
 		## Create Model
@@ -149,6 +150,7 @@ class Node:
 		G_Cop.Collapse(self.vi, self.vj)
 		Node_Div = Node(G_Div, self.S, self.upper_bound, self.lower_bound)
 		Node_Cop = Node(G_Cop, self.S, self.upper_bound, self.lower_bound)
+		Node_Cop.collapse_comb = self.collapse_comb.copy() + [(self.vi, self.vj)]
 		return Node_Div, Node_Cop
 
 def BranchAndPrice(n: int, S: int):
@@ -167,9 +169,6 @@ def BranchAndPrice(n: int, S: int):
 	optimum_columns = []
 
 	while candidate_node:
-		if upper_bound - lower_bound <= 100:
-			break
-
 		node = candidate_node.pop(0)
 
 		if node.lower_bound >= upper_bound:
@@ -217,7 +216,8 @@ def BranchAndPrice(n: int, S: int):
 
 if __name__ == '__main__':
 	numpy.random.seed(60)
-	BranchAndPrice(29, 7)
-
+	BranchAndPrice(50, 7)
+	# numpy.random.seed(60)
+	# BranchAndPrice(29, 7)
 	# numpy.random.seed(5)
 	# BranchAndPrice(15, 4)
