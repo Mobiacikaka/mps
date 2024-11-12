@@ -164,8 +164,12 @@ def BranchAndPrice(n: int, S: int):
 	)
 	candidate_node = [root_node]
 	current_optimun = []
+	optimum_columns = []
 
 	while candidate_node:
+		if upper_bound - lower_bound <= 100:
+			break
+
 		node = candidate_node.pop(0)
 
 		if node.lower_bound >= upper_bound:
@@ -189,24 +193,26 @@ def BranchAndPrice(n: int, S: int):
 				print('LOG::IS OPTIMUM')
 				upper_bound = node.upper_bound
 				current_optimun = node.solution
+				for var in current_optimun:
+					if var.X == 1.0:
+						optimum_columns.append(node.mlp.model.getCol(var))
 			continue
 		else:
 			pass
-			# for var in node.mlp.model.getVars():
-			# 	if var.X != 0.0:
-			# 		print(f'{var.VarName}={var.X}\t{node.mlp.model.getCol(var)}')
 
 		if node.is_child_problem():
 			Node_Div, Node_Cop = node.get_child_problem()
 			candidate_node.append(Node_Div)
 			candidate_node.append(Node_Cop)
-			print('LOG::Branching')
+			print('LOG::Branching', node.vi, node.vj)
 
 	print('upper_bound: ', upper_bound)
 	# print('optimum: ', current_optimun)
+	i = 0
 	for var in current_optimun:
 		if var.X == 1.0:
-			print(var.VarName)
+			print(var.VarName, optimum_columns[i])
+			i += 1
 
 if __name__ == '__main__':
 	numpy.random.seed(60)
