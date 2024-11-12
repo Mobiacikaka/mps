@@ -47,7 +47,7 @@ class Graph:
 
 	def Divide(self, i: int, j: int):
 		assert(i <= self.n and j <= self.n)
-		self.E[i][j] = self.E[j][i] = 200
+		self.E[i][j] = self.E[j][i] = 2**20
 
 	def Collapse(self, i: int, j: int):
 		## TODO

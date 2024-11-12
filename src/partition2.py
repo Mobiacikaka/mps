@@ -189,9 +189,10 @@ def BranchAndPrice(n: int, S: int):
 				current_optimun = node.solution
 			continue
 		else:
-			for var in node.mlp.model.getVars():
-				if var.X != 0.0:
-					print(f'{var.VarName}={var.X}\t{node.mlp.model.getCol(var)}')
+			pass
+			# for var in node.mlp.model.getVars():
+			# 	if var.X != 0.0:
+			# 		print(f'{var.VarName}={var.X}\t{node.mlp.model.getCol(var)}')
 
 		if node.is_child_problem():
 			Node_Div, Node_Cop = node.get_child_problem()
