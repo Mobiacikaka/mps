@@ -209,8 +209,8 @@ def BranchAndPrice(n: int, S: int):
 			print(var.VarName)
 
 if __name__ == '__main__':
-	# numpy.random.seed(60)
-	# BranchAndPrice(29, 7)
+	numpy.random.seed(60)
+	BranchAndPrice(29, 7)
 
-	numpy.random.seed(5)
-	BranchAndPrice(15, 4)
+	# numpy.random.seed(5)
+	# BranchAndPrice(15, 4)
