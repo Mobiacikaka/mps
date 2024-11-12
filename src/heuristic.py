@@ -1,5 +1,6 @@
 import gurobipy, heapq, colorama
 from itertools import combinations
+from typing import List
 
 from masterlp import MLP
 from priceip import PriceIP as SUB
@@ -17,7 +18,7 @@ def subset(A: list, B: list) -> bool:
 			return False
 	return True
 
-def GetSumofQ(xlp: list[gurobipy.Var], clusters: list[list], Q: list) -> float:
+def GetSumofQ(xlp: List[gurobipy.Var], clusters: List[list], Q: list) -> float:
 	s = 0.0
 	for p in range(len(clusters)):
 		P = clusters[p]
