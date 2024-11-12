@@ -6,9 +6,9 @@ from priceip import PriceIP as SUB
 
 def solve():
 	## number of vertex
-	n = 21
+	n = 29
 	## least number of cluster
-	S = 4
+	S = 7
 	G = Graph(n)
 	G.PrintGraph()
 

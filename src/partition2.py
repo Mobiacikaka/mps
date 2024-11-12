@@ -113,14 +113,14 @@ class Node:
 
 	def is_integer(self):
 		assert(self.mlp != None)
-		print('LOG::is_integer')
+		# print('LOG::is_integer')
 		for var in self.mlp.model.getVars():
 			if var.X > 0 and var.X < 1:
 				return False
 		return True
 
 	def is_child_problem(self) -> bool:
-		print('LOG::is_child_problem')
+		# print('LOG::is_child_problem')
 		Vars = self.mlp.model.getVars()
 		for xP1 in range(len(Vars)-1):
 			self.vi = self.vj = -1
@@ -129,7 +129,6 @@ class Node:
 			for xP2 in range(xP1+1, len(Vars)):
 				if Vars[xP2].X == 0.0 or Vars[xP2].X == 1.0:
 					continue
-				print(self.mlp.columns[xP1], self.mlp.columns[xP2])
 				for vi in range(self.G.n): ## vi is the vertice that in both clusters
 					if self.mlp.columns[xP1][vi] + self.mlp.columns[xP2][vi] == 2:
 						self.vi = vi
@@ -144,7 +143,7 @@ class Node:
 		return False
 
 	def get_child_problem(self):
-		print('LOG::get_child_problem')
+		# print('LOG::get_child_problem')
 		G_Div, G_Cop = copy.deepcopy(self.G), copy.deepcopy(self.G)
 		G_Div.Divide(self.vi, self.vj)
 		G_Cop.Collapse(self.vi, self.vj)
@@ -170,17 +169,17 @@ def BranchAndPrice(n: int, S: int):
 		node = candidate_node.pop(0)
 
 		if node.lower_bound >= upper_bound:
-			print('prune by bound')
+			print('LOG::PRUNE BY BOUND')
 			continue
 
 		model_status = node.optimize()
 		if model_status == GRB.INFEASIBLE:
-			print('prune by infeasibility')
+			print('LOG::PRUNE BY INFEASIBILITY')
 			continue
 
 		node.update_lower_bound()
 		if node.lower_bound >= upper_bound:
-			print('prune by bound')
+			print('LOG::PRUNE BY BOUND')
 			continue
 
 		if node.is_integer():
@@ -198,6 +197,7 @@ def BranchAndPrice(n: int, S: int):
 			Node_Div, Node_Cop = node.get_child_problem()
 			candidate_node.append(Node_Div)
 			candidate_node.append(Node_Cop)
+			print('LOG::Branching')
 
 	print('upper_bound: ', upper_bound)
 	# print('optimum: ', current_optimun)
@@ -206,5 +206,8 @@ def BranchAndPrice(n: int, S: int):
 			print(var.VarName)
 
 if __name__ == '__main__':
-	numpy.random.seed(60)
-	BranchAndPrice(29, 7)
+	# numpy.random.seed(60)
+	# BranchAndPrice(29, 7)
+
+	numpy.random.seed(5)
+	BranchAndPrice(15, 4)
