@@ -183,8 +183,10 @@ def BranchAndPrice(n: int, S: int):
 			continue
 
 		if node.is_integer():
+			print('LOG::IS INTEGER')
 			node.update_upper_bound()
 			if node.upper_bound < upper_bound:
+				print('LOG::IS OPTIMUM')
 				upper_bound = node.upper_bound
 				current_optimun = node.solution
 			continue
