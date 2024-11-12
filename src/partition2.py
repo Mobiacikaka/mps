@@ -1,10 +1,14 @@
-import numpy, colorama, copy
+import copy
+
+import colorama
+import numpy
 from gurobipy import GRB
 
 import heuristic
 from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
+
 
 def solve(n: int, S: int):
 	G = Graph(n)
