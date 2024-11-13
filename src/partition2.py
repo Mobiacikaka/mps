@@ -10,7 +10,9 @@ from masterlp import MLP
 from priceip import PriceIP as SUB
 
 
-def solve(n: int, S: int):
+def solve():
+	n = 21
+	S = 5
 	G = Graph(n)
 	G.PrintGraph()
 
