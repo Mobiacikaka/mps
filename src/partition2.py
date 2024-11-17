@@ -6,48 +6,6 @@ from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
 
-def solve(n: int, S: int):
-	G = Graph(n)
-	G.PrintGraph()
-
-	cppmin = MLP(G, S)
-	cppmin.create_model()
-	sub_prob = SUB(G, S)
-	sub_prob.create_model()
-
-	while True:
-		## 2: Approximately solve the current LP relaxation using CPLEX
-		cppmin.solve()
-		cppmin.write('mlp.lp')
-		if cppmin.model.Status == GRB.INFEASIBLE:
-			print('INFEASIBLE')
-			exit()
-
-		## Generate Q set
-		# QSet = heuristic.GenerateQSET(cppmin, n, S)
-
-		## 3: Generate columns using heuristic algorithms, if new columns are found goto 2.
-		# if heuristic.HeuristicI(G, S, cppmin)   == True:
-		# 	continue
-
-		## 5: Generate columns using an IP solver, if new columns are found goto 2.
-		if heuristic.IPSolver(cppmin, sub_prob) == True: ## There is new column generated
-			continue
-
-		## 6: If the gap between the value of the LP relaxation
-		##    and the value of the incumbent integer solution is sufficiently small,
-		##    STOP with optimality
-		break
-
-	print()
-	for x in cppmin.model.getVars():
-		if x.X != 0.0:
-			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
-
-	if not cppmin.is_integer():
-		print('WARNING::There is only fractional solution!')
-		exit()
-
 def SolveNode(G: Graph, S: int):
 	mlp = MLP(G, S) ## Master Linear Problem
 	mlp.create_model()
