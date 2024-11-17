@@ -6,26 +6,6 @@ from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
 
-def SolveNode(G: Graph, S: int):
-	mlp = MLP(G, S) ## Master Linear Problem
-	mlp.create_model()
-	pip = SUB(G, S) ## Price Integer Problem
-	pip.create_model()
-
-	while True:
-		mlp.solve()
-		mlp.write('master.lp')
-		if mlp.model.Status == GRB.INFEASIBLE:
-			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
-			exit()
-
-		if heuristic.IPSolver(mlp, pip) == True:
-			continue
-
-		break
-
-	return mlp
-
 class Node:
 	def __init__(self, G: Graph, S: int, upper_bound: float, lower_bound: float) -> None:
 		self.G = G
