@@ -20,14 +20,21 @@ def BranchAndPrice(n: int, S: int):
 	optimum_columns = []
 	node_collapse_seq = []
 
+	node_count = 0
+
 	while candidate_node:
-		node = candidate_node.pop(0)
+		node = candidate_node.pop()
 
 		if node.lower_bound >= upper_bound:
 			print('LOG::PRUNE BY BOUND')
 			continue
 
 		model_status = node.optimize()
+		if True:
+			file = open(f'columns_{node_count}.txt', 'w')
+			for column in node.mlp.columns:
+				file.write(f'{column}\n')
+		node_count += 1
 		if model_status == GRB.INFEASIBLE:
 			print('LOG::PRUNE BY INFEASIBILITY')
 			continue
@@ -54,24 +61,24 @@ def BranchAndPrice(n: int, S: int):
 			pass
 
 		if node.is_child_problem():
+			print('LOG::Branching, branched by', node.vi, node.vj)
 			Node_Div, Node_Cop = node.get_child_problem()
 			candidate_node.append(Node_Div)
 			candidate_node.append(Node_Cop)
-			print('LOG::Branching')
 
 	print('upper_bound: ', upper_bound)
 	# print('optimum: ', current_optimun)
 	i = 0
-	print(node_collapse_seq)
+	print('Collapsed Nodes', node_collapse_seq)
 	for var in current_optimun:
 		if var.X == 1.0:
 			print(var.VarName, optimum_columns[i])
 			i += 1
 
 if __name__ == '__main__':
-	numpy.random.seed(60)
-	BranchAndPrice(50, 7)
 	# numpy.random.seed(60)
-	# BranchAndPrice(29, 7)
+	# BranchAndPrice(50, 7)
+	numpy.random.seed(60)
+	BranchAndPrice(29, 7)
 	# numpy.random.seed(5)
 	# BranchAndPrice(15, 4)
