@@ -225,6 +225,45 @@ def HeuristicII(mlp: MLP, verbose: bool=False):
 		mlp.update_contrs(column_coeff)
 	return True
 
+def HeuristicIII(mlp: MLP, S: int, E, pi, a):
+	for i in range(mlp.G.n):
+		CLIQ = [i]
+		vLeft = [j for j in range(mlp.G.n) if j != i]
+		while True:
+			## find the best v
+			bestV = -1
+			bestCost = 1e9
+			for v in vLeft:
+				curCost = pi[v]
+				for vInP in CLIQ:
+					curCost -= E[v][vInP]
+				if curCost < bestCost:
+					bestCost = curCost
+					bestV = v
+			## judge to continue or break
+			if len(CLIQ) < S or bestCost > 0:
+				continue
+			else:
+				break
+
+def LocalSearch(CLIQ: list, vLeft: list, E: list, pi: list, curCost: int):
+	def CanDelete(CLIQ: list, E: list, pi: list):
+		for vInP in CLIQ:
+			sum = pi[vInP]
+			for vOthers in CLIQ:
+				if vInP == vOthers:
+					continue
+				sum -= E[vInP][vOthers]
+			if sum < 0:
+				CLIQ.remove(vInP)
+				return True
+		return False
+
+	def CanAdd(CLIQ: list, vLeft: list, E: list, pi: list):
+
+	while CanDelete(CLIQ, E, pi) or CanAdd(CLIQ, vLeft, E, pi):
+		continue
+
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
 	subproblem.set_objective(pi)
