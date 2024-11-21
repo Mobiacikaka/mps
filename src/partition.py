@@ -1,4 +1,3 @@
-from sys import maxsize
 import numpy, time, math, colorama
 from gurobipy import GRB
 from graph import Graph
@@ -162,7 +161,7 @@ def PrintVarX(xlp: list[gurobipy.Var]):
 			print(f'{var.VarName}={var.X}', end='\n')
 	print()
 
-def GenerateQSET(mlp: MLP, n, S, verbose: bool=False):
+def GenerateQSET(mlp: MLP, n, S, verbose: bool):
 	xlp = mlp.model.getVars()
 	columns = mlp.columns
 
@@ -187,9 +186,55 @@ def GenerateQSET(mlp: MLP, n, S, verbose: bool=False):
 					print('LOG::GenerateQSET: Generated Cutting Planes', Q)
 	return QSet
 
-def HeuristicII(mlp: MLP, verbose: bool=False):
+def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, G: Graph, Q: list):
+	wP = G.Weight(column)
+
+	assert(len(column) == len(pi))
+	pi_sum = 0.0
+	for i in range(len(column)):
+		pi_sum += column[i] * pi[i]
+
+	assert(len(sigma_list) == len(Q))
+	sigma_sum = 0.0
+	for i in range(len(sigma_list)):
+		sigma_sum += int(heuristic.subset(column, Q[i])) * sigma_list[i]
+
+	return pi_sum + sigma + sigma_sum - wP
+
+def HeuristicI (mlp: MLP, verbose: bool):
+	if verbose:
+		print('LOG::HEURISTICI')
+	maxsize = 2 * mlp.S - 1
 	pi, sigma, sigma_list = mlp.get_dual_vars()
-	column_coeff_list = []
+	column_pool = []
+	if maxsize > mlp.G.n:
+		maxsize = mlp.G.n
+	for i in range(mlp.G.n):
+		cloest_i = sorted(mlp.G.V, key=lambda x: mlp.G.E[i][x])[:maxsize]
+		for size in range(mlp.S, maxsize):
+			for cluster in combinations(cloest_i, size):
+				column = [int(v in cluster) for v in mlp.G.V]
+				price = PriceColumn(column, pi, sigma, sigma_list, G, mlp.cutting_planes)
+				if price > 0:
+					column_pool.append( (column, price) )
+
+	## Add the 10 most violating columns from the column pool
+	## with no more than 10 columns on the same vertex added.
+	if len(column_pool) == 0:
+		return False
+
+	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
+	for column_coeff, price in column_pool:
+		if verbose:
+			print('LOG::HEURISTICI: Generated Column', column_coeff)
+		mlp.update_contrs(column_coeff)
+	return True
+
+def HeuristicII(mlp: MLP, verbose: bool):
+	if verbose:
+		print('LOG::HEURISTICII')
+	pi, sigma, sigma_list = mlp.get_dual_vars()
+	column_pool = []
 	for Qi in mlp.cutting_planes:
 		index = []
 		for i in range(mlp.G.n):
@@ -204,22 +249,15 @@ def HeuristicII(mlp: MLP, verbose: bool=False):
 		for size in range(minsize, maxsize+1):
 			for cluster in combinations(index, size):
 				column = [int(x in cluster) for x in range(mlp.G.n)]
-				wp = mlp.G.Weight(column)
-				pi_sum = sum([pi[i] * column[i] for i in range(mlp.G.n)])
-				sigma_sum = sum(
-					[
-						sigma_list[i] * int(heuristic.subset(column, mlp.cutting_planes[i]))
-						for i in range(len(mlp.cutting_planes))
-					]
-				)
-				if pi_sum + sigma + sigma_sum > wp:
-					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
+				price = PriceColumn(column, pi, sigma, sigma_list, G, mlp.cutting_planes)
+				if price > 0:
+					column_pool.append( (column, price) )
 
-	if len(column_coeff_list) == 0:
+	if len(column_pool) == 0:
 		return False
 
-	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)[:10]
-	for column_coeff, _ in column_coeff_list:
+	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
+	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICII: Generated Column', column_coeff)
 		mlp.update_contrs(column_coeff)
@@ -295,10 +333,13 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 
+		if HeuristicI (mlp, verbose) == True:
+			continue
+
 		if HeuristicII(mlp, verbose) == True:
 			continue
 
-		Q = GenerateQSET(mlp, G.n, S)
+		Q = GenerateQSET(mlp, G.n, S, verbose)
 		if len(Q):
 			mlp.AddCuttingPlanesMLP(Q)
 			pip.AddCuttingPlanesSUB(Q)
