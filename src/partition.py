@@ -1,9 +1,16 @@
-import numpy, time, math, colorama
+import math
+import time
+from sys import maxsize
+
+import colorama
+import gurobipy
+import numpy
 from gurobipy import GRB
 from numpy.random import f
-from graph import Graph
-import gurobipy
+
 import heuristic
+from graph import Graph
+
 
 class MLP:
 	def __init__(self, G: Graph, S: int) -> None:
@@ -11,6 +18,7 @@ class MLP:
 		self.S = S
 		self.n_col = 0 ##
 		self.n_dim = 0 ## 变量数量
+		self.cutting_planes = []
 		self.cutting_planes = []
 
 	def create_model(self):
@@ -25,6 +33,13 @@ class MLP:
 		return self.model.getVars()
 
 	def get_dual_vars(self):
+		dual_values = [constr.getAttr(GRB.Attr.Pi) for constr in self.model.getConstrs()]
+		pi = dual_values[:self.G.n]
+		sigma = dual_values[self.G.n]
+		sigma_list = []
+		if len(dual_values) > self.G.n+1:
+			sigma_list = dual_values[self.G.n+1:]
+		return pi, sigma, sigma_list
 		dual_values = [constr.getAttr(GRB.Attr.Pi) for constr in self.model.getConstrs()]
 		pi = dual_values[:self.G.n]
 		sigma = dual_values[self.G.n]
@@ -57,7 +72,15 @@ class MLP:
 
 		_column_coeff = column_coeff
 		column_coeff = _column_coeff.copy()
+		_column_coeff = column_coeff
+		column_coeff = _column_coeff.copy()
 		column_coeff.append(1)
+		for i in range(len(self.cutting_planes)):
+			column_coeff.append(
+				int(
+					heuristic.subset(_column_coeff, self.cutting_planes[i])
+				)
+			)
 		for i in range(len(self.cutting_planes)):
 			column_coeff.append(
 				int(
@@ -91,6 +114,21 @@ class MLP:
 
 	def write(self, filename='model.lp'):
 		self.model.write(filename)
+
+	def AddCuttingPlanesMLP(self, Q: list):
+		xlp = self.model.getVars()
+		for Qi in Q:
+			xps: list[gurobipy.Var] = []
+			for i in range(len(xlp)):
+				if heuristic.subset(self.columns[i], Qi):
+					xps.append(xlp[i])
+			self.model.addConstr(
+				gurobipy.quicksum( xp for xp in xps ) <= ((sum(Qi) // S) * 1.0)
+			)
+
+		for Qi in Q:
+			assert(len(Qi) == self.G.n)
+			self.cutting_planes.append(Qi)
 
 	def AddCuttingPlanesMLP(self, Q: list):
 		xlp = self.model.getVars()
@@ -146,6 +184,14 @@ class SUB:
 
 	def write(self):
 		self.model.write('sub_model.lp')
+
+	def AddCuttingPlanesSUB(self, Q: list):
+		y = self.model.getVars()
+		for Qi in Q:
+			for i in range(n):
+				if Qi[i]:
+					continue
+				self.model.addConstr(y[i] >= 1)
 
 	def AddCuttingPlanesSUB(self, Q: list):
 		y = self.model.getVars()
@@ -221,7 +267,39 @@ def HeuristicII(mlp: MLP, verbose: bool=False):
 
 	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)
 
+def HeuristicII(mlp: MLP, verbose: bool=False):
+	pi, sigma, sigma_list = mlp.get_dual_vars()
+	column_coeff_list = []
+	violated_value = []
+	for Qi in mlp.cutting_planes:
+		index = []
+		for i in range(mlp.G.n):
+			if Qi[i] == 1:
+				index.append(i)
+
+		assert(len(index) > mlp.S)
+		minsize = mlp.S
+		maxsize = mlp.S * 2 - 1
+		if maxsize > len(index):
+			maxsize = len(index)
+		for size in range(minsize, maxsize+1):
+			for cluster in combinations(index, size):
+				column = [int(x in cluster) for x in range(mlp.G.n)]
+				wp = mlp.G.Weight(column)
+				pi_sum = sum([pi[i] * column[i] for i in range(mlp.G.n)])
+				sigma_sum = sum(
+					[
+						sigma_list[i] * int(heuristic.subset(column, mlp.cutting_planes[i]))
+						for i in range(len(mlp.cutting_planes))
+					]
+				)
+				if pi_sum + sigma + sigma_sum > wp:
+					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
+
+	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)
+
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
+	pi, sigma, sigma_list = masterproblem.get_dual_vars()
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
 	subproblem.set_objective(pi)
 	subproblem.solve()
@@ -285,6 +363,7 @@ def TimeEstimate(n: int, S: int):
 		if cppmin.model.Status == GRB.INFEASIBLE:
 			print('INFEASIBLE')
 			exit()
+		pi, sigma, sigma_list = cppmin.get_dual_vars()
 		pi, sigma, sigma_list = cppmin.get_dual_vars()
 		assert(pi not in PI), 'Generated a same pi'
 		PI.append(pi)
