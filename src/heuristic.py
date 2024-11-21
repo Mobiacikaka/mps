@@ -79,7 +79,7 @@ def HeuristicI(G: Graph, S: int, masterproblem: MLP, verbose: bool):
 		index = list(range(G.n))
 		index = sorted(index, key=lambda x: G.E[i][x])[:2*S]
 		## Enumerate all clusters of size S to 2S − 1 from these 2S vertices.
-		for size in range(S, 2*S-1):
+		for size in range(S, 2*S):
 			for cluster in combinations(index, size):
 				Q = [int(x in cluster) for x in range(G.n)]
 				q = sum(Q) // S + 1
@@ -112,8 +112,17 @@ def HeuristicI(G: Graph, S: int, masterproblem: MLP, verbose: bool):
 
 	return True
 
-def HeuristicII(G: Graph, S: int, mlp: MLP, verbose: bool):
-	pass
+def HeuristicII(mlp: MLP, Q: list, verbose: bool):
+	index = list(range(mlp.G.n))
+	pi = mlp.get_dual_vars()
+	column_coeff_list = []
+	violated_value = []
+	for Qi in Q:
+		for size in range(mlp.S, mlp.S*2):
+			for cluster in combinations(index, size):
+				column = [int(x in cluster) for x in range(mlp.G.n)]
+				wp = mlp.G.Weight(column)
+				piv = sum([pi[i] * column[i] for i in range])
 
 def HeuristicIII(G: Graph, S: int, mlp: MLP, verbose: bool):
 	pi, _ = mlp.get_dual_vars()
