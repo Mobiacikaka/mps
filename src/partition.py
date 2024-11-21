@@ -194,7 +194,6 @@ def GenerateQSET(mlp: MLP, n, S):
 def HeuristicII(mlp: MLP, verbose: bool=False):
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_coeff_list = []
-	violated_value = []
 	for Qi in mlp.cutting_planes:
 		index = []
 		for i in range(mlp.G.n):
@@ -219,8 +218,16 @@ def HeuristicII(mlp: MLP, verbose: bool=False):
 				)
 				if pi_sum + sigma + sigma_sum > wp:
 					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
-	
-	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)
+
+	if len(column_coeff_list) == 0:
+		return False
+
+	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)[:10]
+	for column_coeff, _ in column_coeff_list:
+		if verbose:
+			print('LOG::HEURISTICII: Generated Column', column_coeff)
+		mlp.update_contrs(column_coeff)
+	return True
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
@@ -252,6 +259,9 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		if mlp.model.Status == GRB.INFEASIBLE:
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
+
+		if HeuristicII(mlp, verbose) == True:
+			continue
 
 		Q = GenerateQSET(mlp, G.n, S)
 		if len(Q):
