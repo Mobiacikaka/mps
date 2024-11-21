@@ -162,15 +162,9 @@ def PrintVarX(xlp: list[gurobipy.Var]):
 			print(f'{var.VarName}={var.X}', end='\n')
 	print()
 
-def GenerateQSET(mlp: MLP, n, S):
-	# print('\nLOG::GenerateQSET')
+def GenerateQSET(mlp: MLP, n, S, verbose: bool=False):
 	xlp = mlp.model.getVars()
 	columns = mlp.columns
-	# if not mlp.is_integer():
-	# 	PrintVarX(xlp)
-	# 	for i in range(len(xlp)):
-	# 		if xlp[i].X != 0.0 :
-	# 			print(columns[i])
 
 	QSet = []
 	for i in range(len(xlp)-1):
@@ -189,6 +183,8 @@ def GenerateQSET(mlp: MLP, n, S):
 			q = sum(Q) // S + 1
 			if heuristic.GetSumofQ(xlp, columns, Q) > q - 1: ## violated
 				QSet.append(Q)
+				if verbose:
+					print('LOG::GenerateQSET: Generated Cutting Planes', Q)
 	return QSet
 
 def HeuristicII(mlp: MLP, verbose: bool=False):
@@ -267,8 +263,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		if len(Q):
 			mlp.AddCuttingPlanesMLP(Q)
 			pip.AddCuttingPlanesSUB(Q)
-
-		# if heuristic.HeuristicII(
+			continue
 
 		if IPSolver(mlp, pip, verbose) == True:
 			continue
