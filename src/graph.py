@@ -4,6 +4,10 @@ class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
 		self.V, self.a, self.E = self.__createGraph__(self.n)
+		self.closest_vertex = [
+			sorted(self.V, key=lambda x: self.E[i][x])
+			for i in range(self.n)
+		]
 
 	## Random create edges
 	def __createGraph__(self, n: int):
