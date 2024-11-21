@@ -40,7 +40,6 @@ class Graph:
 		f = open(filename, 'w')
 		for edges in self.E:
 			for edge in edges:
-				print(str(edge), end='\t')
 				f.write(str(edge)+'\t')
 			f.write('\n')
 

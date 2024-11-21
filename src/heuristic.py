@@ -1,6 +1,7 @@
 import gurobipy, heapq, colorama
 from itertools import combinations
 from typing import List
+from gurobipy import GRB
 
 from masterlp import MLP
 from priceip import PriceIP as SUB
@@ -49,18 +50,17 @@ def GenerateQSET(masterproblem: MLP, n, S):
 				QSet.append(Q)
 	return QSet
 
-def IPSolver(masterproblem: MLP, subproblem: SUB):
-	# print('LOG::USING IPSOLVER')
-
+def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	pi, sigma = masterproblem.get_dual_vars()
 	subproblem.set_objective(pi)
 	subproblem.solve()
 	subproblem.write()
 
 	y = subproblem.get_solution()
-	# print('Generate Column: ', y)
 	reduced_cost = subproblem.get_reduced_cost()
-	# print('reduced_cost-sigma: ', reduced_cost-sigma)
+	if verbose:
+		print('IPSOLVER::Generated Column: ', y)
+		print('reduced_cost-sigma: ', reduced_cost-sigma)
 
 	if reduced_cost - sigma >= -1e-6:
 		return False
@@ -68,9 +68,7 @@ def IPSolver(masterproblem: MLP, subproblem: SUB):
 	masterproblem.update_contrs(y)
 	return True
 
-def HeuristicI(G: Graph, S: int, masterproblem: MLP):
-	print('LOG::USING HEURISTIC I')
-
+def HeuristicI(G: Graph, S: int, masterproblem: MLP, verbose: bool):
 	model = masterproblem.model
 	xlp = model.getVars()
 	columns = masterproblem.columns
@@ -107,7 +105,91 @@ def HeuristicI(G: Graph, S: int, masterproblem: MLP):
 			if y[i] == 1 and masterproblem.constrsLen[i] >= 10:
 				flag = False
 		if flag:
-			print(f'{colorama.Fore.RED}Generate Column: {y}{colorama.Style.RESET_ALL}')
+			if verbose:
+				print('HEURISTICI::Generated Column: ', y)
+			# print(f'{colorama.Fore.RED}Generated Column: {y}{colorama.Style.RESET_ALL}')
 			masterproblem.update_contrs(y)
 
 	return True
+
+def HeuristicII(G: Graph, S: int, mlp: MLP, verbose: bool):
+	pass
+
+def HeuristicIII(G: Graph, S: int, mlp: MLP, verbose: bool):
+	pi, _ = mlp.get_dual_vars()
+	for i in range(G.n):
+		cliq = [0] * G.n
+		cliq[i] = 1
+		v = 0
+		for j in range(G.n):
+			if cliq[j]:
+				continue
+
+def solve(n: int, S: int):
+	G = Graph(n)
+	G.PrintGraph()
+
+	cppmin = MLP(G, S)
+	cppmin.create_model()
+	sub_prob = SUB(G, S)
+	sub_prob.create_model()
+
+	while True:
+		## 2: Approximately solve the current LP relaxation using CPLEX
+		cppmin.solve()
+		cppmin.write('mlp.lp')
+		if cppmin.model.Status == GRB.INFEASIBLE:
+			print('INFEASIBLE')
+			exit()
+
+		## Generate Q set
+		# QSet = heuristic.GenerateQSET(cppmin, n, S)
+
+		## 3: Generate columns using heuristic algorithms, if new columns are found goto 2.
+		# if heuristic.HeuristicI(G, S, cppmin)   == True:
+		# 	continue
+
+		## 5: Generate columns using an IP solver, if new columns are found goto 2.
+		if IPSolver(cppmin, sub_prob, True) == True: ## There is new column generated
+			continue
+
+		## 6: If the gap between the value of the LP relaxation
+		##    and the value of the incumbent integer solution is sufficiently small,
+		##    STOP with optimality
+		break
+
+	print()
+	for x in cppmin.model.getVars():
+		if x.X != 0.0:
+			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
+
+	if not cppmin.is_integer():
+		print('WARNING::There is only fractional solution!')
+		exit()
+
+def SolveNode(G: Graph, S: int, verbose: bool=False):
+	mlp = MLP(G, S) ## Master Linear Problem
+	mlp.create_model()
+	pip = SUB(G, S) ## Price Integer Problem
+	pip.create_model()
+
+	while True:
+		mlp.solve()
+		mlp.write('master.lp')
+		if mlp.model.Status == GRB.INFEASIBLE:
+			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
+			exit()
+
+		# Q = GenerateQSET(mlp, G.n, S)
+		# if len(Q) and verbose:
+		# 	print(Q)
+
+		# if HeuristicI(G, S, mlp, verbose) == True:
+		# 	continue
+
+		if IPSolver(mlp, pip, verbose) == True:
+			continue
+
+		break
+
+	return mlp
