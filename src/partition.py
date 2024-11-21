@@ -1,9 +1,15 @@
-import numpy, time, math, colorama
+import math
+import time
+
+import colorama
+import gurobipy
+import numpy
 from gurobipy import GRB
 from numpy.random import f
-from graph import Graph
-import gurobipy
+
 import heuristic
+from graph import Graph
+
 
 class MLP:
 	def __init__(self, G: Graph, S: int) -> None:
@@ -210,6 +216,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 
 		Q = GenerateQSET(mlp, G.n, S)
 		if len(Q):
+			print(Q)
 			mlp = AddCuttingPlanesMLP(mlp, Q)
 			pip = AddCuttingPlanesSUB(pip, Q)
 
@@ -291,7 +298,7 @@ if __name__ == '__main__':
 
 	G = Graph(n)
 	G.PrintGraph()
-	mlp = SolveNode(G, S, verbose=True)
+	mlp = SolveNode(G, S, verbose=False)
 	print(mlp.model.ObjVal)
 
 	PrintVarX(mlp.model.getVars())
