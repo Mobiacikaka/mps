@@ -201,21 +201,26 @@ def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, G: Graph
 
 	return pi_sum + sigma + sigma_sum - wP
 
+def InPool(column_pool: list, column: list) -> bool:
+	for columnB, _ in column_pool:
+		if column == columnB:
+			return True
+	return False
+
 def HeuristicI (mlp: MLP, verbose: bool):
 	if verbose:
 		print('LOG::HEURISTICI')
-	maxsize = 2 * mlp.S - 1
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
-	if maxsize > mlp.G.n:
-		maxsize = mlp.G.n
 	for i in range(mlp.G.n):
-		cloest_i = sorted(mlp.G.V, key=lambda x: mlp.G.E[i][x])[:maxsize]
-		for size in range(mlp.S, maxsize):
+		cloest_i = mlp.G.closest_vertex[i][:2 * mlp.S - 1]
+		for size in range(mlp.S, 2 * mlp.S - 1):
 			for cluster in combinations(cloest_i, size):
 				column = [int(v in cluster) for v in mlp.G.V]
+				if InPool(column_pool, column):
+					continue
 				price = PriceColumn(column, pi, sigma, sigma_list, G, mlp.cutting_planes)
-				if price > 0:
+				if price > 1e-6:
 					column_pool.append( (column, price) )
 
 	## Add the 10 most violating columns from the column pool
@@ -227,6 +232,7 @@ def HeuristicI (mlp: MLP, verbose: bool):
 	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICI: Generated Column', column_coeff)
+			print('LOG::HEURISTICI: reduced_cost', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
@@ -249,8 +255,10 @@ def HeuristicII(mlp: MLP, verbose: bool):
 		for size in range(minsize, maxsize+1):
 			for cluster in combinations(index, size):
 				column = [int(x in cluster) for x in range(mlp.G.n)]
+				if InPool(column_pool, column):
+					continue
 				price = PriceColumn(column, pi, sigma, sigma_list, G, mlp.cutting_planes)
-				if price > 0:
+				if price > 1e-6:
 					column_pool.append( (column, price) )
 
 	if len(column_pool) == 0:
@@ -407,10 +415,10 @@ def TimeEstimate(n: int, S: int):
 	print(time_master, time_subprob)
 
 if __name__ == '__main__':
-	numpy.random.seed(60)
+	numpy.random.seed(5)
 
-	n = 29
-	S = 7
+	n = 15
+	S = 4
 
 	G = Graph(n)
 	G.PrintGraph()
