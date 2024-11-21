@@ -236,68 +236,6 @@ def GenerateQSET(mlp: MLP, n, S):
 				QSet.append(Q)
 	return QSet
 
-def HeuristicII(mlp: MLP, verbose: bool=False):
-	pi, sigma, sigma_list = mlp.get_dual_vars()
-	column_coeff_list = []
-	violated_value = []
-	for Qi in mlp.cutting_planes:
-		index = []
-		for i in range(mlp.G.n):
-			if Qi[i] == 1:
-				index.append(i)
-
-		assert(len(index) > mlp.S)
-		minsize = mlp.S
-		maxsize = mlp.S * 2 - 1
-		if maxsize > len(index):
-			maxsize = len(index)
-		for size in range(minsize, maxsize+1):
-			for cluster in combinations(index, size):
-				column = [int(x in cluster) for x in range(mlp.G.n)]
-				wp = mlp.G.Weight(column)
-				pi_sum = sum([pi[i] * column[i] for i in range(mlp.G.n)])
-				sigma_sum = sum(
-					[
-						sigma_list[i] * int(heuristic.subset(column, mlp.cutting_planes[i]))
-						for i in range(len(mlp.cutting_planes))
-					]
-				)
-				if pi_sum + sigma + sigma_sum > wp:
-					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
-
-	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)
-
-def HeuristicII(mlp: MLP, verbose: bool=False):
-	pi, sigma, sigma_list = mlp.get_dual_vars()
-	column_coeff_list = []
-	violated_value = []
-	for Qi in mlp.cutting_planes:
-		index = []
-		for i in range(mlp.G.n):
-			if Qi[i] == 1:
-				index.append(i)
-
-		assert(len(index) > mlp.S)
-		minsize = mlp.S
-		maxsize = mlp.S * 2 - 1
-		if maxsize > len(index):
-			maxsize = len(index)
-		for size in range(minsize, maxsize+1):
-			for cluster in combinations(index, size):
-				column = [int(x in cluster) for x in range(mlp.G.n)]
-				wp = mlp.G.Weight(column)
-				pi_sum = sum([pi[i] * column[i] for i in range(mlp.G.n)])
-				sigma_sum = sum(
-					[
-						sigma_list[i] * int(heuristic.subset(column, mlp.cutting_planes[i]))
-						for i in range(len(mlp.cutting_planes))
-					]
-				)
-				if pi_sum + sigma + sigma_sum > wp:
-					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
-
-	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)
-
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
