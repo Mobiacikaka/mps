@@ -207,15 +207,9 @@ def PrintVarX(xlp: list[gurobipy.Var]):
 			print(f'{var.VarName}={var.X}', end='\n')
 	print()
 
-def GenerateQSET(mlp: MLP, n, S):
-	# print('\nLOG::GenerateQSET')
+def GenerateQSET(mlp: MLP, n, S, verbose: bool=False):
 	xlp = mlp.model.getVars()
 	columns = mlp.columns
-	# if not mlp.is_integer():
-	# 	PrintVarX(xlp)
-	# 	for i in range(len(xlp)):
-	# 		if xlp[i].X != 0.0 :
-	# 			print(columns[i])
 
 	QSet = []
 	for i in range(len(xlp)-1):
@@ -234,7 +228,47 @@ def GenerateQSET(mlp: MLP, n, S):
 			q = sum(Q) // S + 1
 			if heuristic.GetSumofQ(xlp, columns, Q) > q - 1: ## violated
 				QSet.append(Q)
+				if verbose:
+					print('LOG::GenerateQSET: Generated Cutting Planes', Q)
 	return QSet
+
+def HeuristicII(mlp: MLP, verbose: bool=False):
+	pi, sigma, sigma_list = mlp.get_dual_vars()
+	column_coeff_list = []
+	for Qi in mlp.cutting_planes:
+		index = []
+		for i in range(mlp.G.n):
+			if Qi[i] == 1:
+				index.append(i)
+
+		assert(len(index) > mlp.S)
+		minsize = mlp.S
+		maxsize = mlp.S * 2 - 1
+		if maxsize > len(index):
+			maxsize = len(index)
+		for size in range(minsize, maxsize+1):
+			for cluster in combinations(index, size):
+				column = [int(x in cluster) for x in range(mlp.G.n)]
+				wp = mlp.G.Weight(column)
+				pi_sum = sum([pi[i] * column[i] for i in range(mlp.G.n)])
+				sigma_sum = sum(
+					[
+						sigma_list[i] * int(heuristic.subset(column, mlp.cutting_planes[i]))
+						for i in range(len(mlp.cutting_planes))
+					]
+				)
+				if pi_sum + sigma + sigma_sum > wp:
+					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
+
+	if len(column_coeff_list) == 0:
+		return False
+
+	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)[:10]
+	for column_coeff, _ in column_coeff_list:
+		if verbose:
+			print('LOG::HEURISTICII: Generated Column', column_coeff)
+		mlp.update_contrs(column_coeff)
+	return True
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
@@ -268,10 +302,14 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 
+		if HeuristicII(mlp, verbose) == True:
+			continue
+
 		Q = GenerateQSET(mlp, G.n, S)
 		if len(Q):
-			mlp = AddCuttingPlanesMLP(mlp, Q)
-			pip = AddCuttingPlanesSUB(pip, Q)
+			mlp.AddCuttingPlanesMLP(Q)
+			pip.AddCuttingPlanesSUB(Q)
+			continue
 
 		if IPSolver(mlp, pip, verbose) == True:
 			continue
