@@ -1,8 +1,7 @@
-from sys import maxsize
 import numpy, time, math, colorama
 from gurobipy import GRB
+from numpy.random import f
 from graph import Graph
-from itertools import combinations
 import gurobipy
 import heuristic
 
@@ -219,7 +218,7 @@ def HeuristicII(mlp: MLP, verbose: bool=False):
 				)
 				if pi_sum + sigma + sigma_sum > wp:
 					column_coeff_list.append( (column, pi_sum+sigma+sigma_sum - wp) )
-	
+
 	column_coeff_list = sorted(column_coeff_list, key=lambda x: x[1], reverse=True)
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
@@ -255,10 +254,8 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 
 		Q = GenerateQSET(mlp, G.n, S)
 		if len(Q):
-			mlp.AddCuttingPlanesMLP(Q)
-			pip.AddCuttingPlanesSUB(Q)
-
-		# if heuristic.HeuristicII(
+			mlp = AddCuttingPlanesMLP(mlp, Q)
+			pip = AddCuttingPlanesSUB(pip, Q)
 
 		if IPSolver(mlp, pip, verbose) == True:
 			continue
@@ -338,7 +335,7 @@ if __name__ == '__main__':
 
 	G = Graph(n)
 	G.PrintGraph()
-	mlp = SolveNode(G, S, verbose=True)
+	mlp = SolveNode(G, S, verbose=False)
 	print(mlp.model.ObjVal)
 
 	PrintVarX(mlp.model.getVars())
