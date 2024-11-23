@@ -30,10 +30,10 @@ def BranchAndPrice(n: int, S: int):
 			continue
 
 		model_status = node.optimize()
-		if True:
-			file = open(f'columns_{node_count}.txt', 'w')
-			for column in node.mlp.columns:
-				file.write(f'{column}\n')
+		# if True:
+		# 	file = open(f'columns_{node_count}.txt', 'w')
+		# 	for column in node.mlp.columns:
+		# 		file.write(f'{column}\n')
 		node_count += 1
 		if model_status == GRB.INFEASIBLE:
 			print('LOG::PRUNE BY INFEASIBILITY')

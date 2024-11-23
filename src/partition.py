@@ -1,9 +1,13 @@
-import numpy, time, math, colorama
+import numpy, time, math, colorama, heapq
 from gurobipy import GRB
 from graph import Graph
 from itertools import combinations
 import gurobipy
 import heuristic
+
+class CompareClass(tuple):
+	def __lt__(self, other):
+		return self[1] < other[1]
 
 class MLP:
 	def __init__(self, G: Graph, S: int) -> None:
@@ -181,6 +185,8 @@ def GenerateQSET(mlp: MLP, n, S, verbose: bool):
 			## check inequality
 			q = sum(Q) // S + 1
 			if heuristic.GetSumofQ(xlp, columns, Q) > q - 1: ## violated
+				if Q in QSet:
+					continue
 				QSet.append(Q)
 				if verbose:
 					print('LOG::GenerateQSET: Generated Cutting Planes', Q)
@@ -207,59 +213,66 @@ def InPool(column_pool: list, column: list) -> bool:
 			return True
 	return False
 
-def HeuristicI (mlp: MLP, verbose: bool):
+def MaintainPool(column_pool: list, column: list, price: float):
+	MaxLen = 10
+	if InPool(column_pool, column):
+		return 
+	if len(column_pool) < MaxLen:
+		column_pool.append( CompareClass( (column, price) ) )
+		if len(column_pool) == MaxLen:
+			heapq.heapify(column_pool)
+	elif len(column_pool) == MaxLen:
+		if price > column_pool[0][1]:
+			heapq.heappushpop(column_pool, CompareClass( (column, price) ))
+	return
+
+def HeuristicI  (mlp: MLP, verbose: bool):
 	if verbose:
 		print('LOG::HEURISTICI')
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for i in range(mlp.G.n):
 		cloest_i = mlp.G.closest_vertex[i][:2 * mlp.S - 1]
-		for size in range(mlp.S, 2 * mlp.S - 1):
+		for size in range(mlp.S, mlp.S+3):
 			for cluster in combinations(cloest_i, size):
 				column = [int(v in cluster) for v in mlp.G.V]
+				price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
 				if InPool(column_pool, column):
 					continue
-				price = PriceColumn(column, pi, sigma, sigma_list, G, mlp.cutting_planes)
 				if price > 1e-6:
-					column_pool.append( (column, price) )
+					MaintainPool(column_pool, column, price)
 
 	## Add the 10 most violating columns from the column pool
 	## with no more than 10 columns on the same vertex added.
 	if len(column_pool) == 0:
 		return False
 
-	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
 	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICI: Generated Column', column_coeff)
-			print('LOG::HEURISTICI: reduced_cost', price)
+			print('LOG::HEURISTICI: price', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
-def HeuristicII(mlp: MLP, verbose: bool):
+def HeuristicII (mlp: MLP, verbose: bool):
 	if verbose:
 		print('LOG::HEURISTICII')
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for Qi in mlp.cutting_planes:
-		index = []
-		for i in range(mlp.G.n):
-			if Qi[i] == 1:
-				index.append(i)
-
+		index = [i for i in range(mlp.G.n) if Qi[i]]
 		assert(len(index) > mlp.S)
+
 		minsize = mlp.S
-		maxsize = mlp.S * 2 - 1
+		maxsize = mlp.S + 3
 		if maxsize > len(index):
 			maxsize = len(index)
 		for size in range(minsize, maxsize+1):
 			for cluster in combinations(index, size):
 				column = [int(x in cluster) for x in range(mlp.G.n)]
-				if InPool(column_pool, column):
-					continue
-				price = PriceColumn(column, pi, sigma, sigma_list, G, mlp.cutting_planes)
+				price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
 				if price > 1e-6:
-					column_pool.append( (column, price) )
+					MaintainPool(column_pool, column, price)
 
 	if len(column_pool) == 0:
 		return False
@@ -268,6 +281,7 @@ def HeuristicII(mlp: MLP, verbose: bool):
 	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICII: Generated Column', column_coeff)
+			print('LOG::HEURISTICII: price', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
@@ -292,14 +306,31 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 					bestV = v
 			## judge to continue or break
 			if len(CLIQ) < S or bestCost > 0:
+				CLIQ.append(bestV)
+				vLeft.remove(bestV)
 				continue
 			else:
 				break
+		column = [int(x in CLIQ) for x in range(mlp.G.n)]
+		if InPool(column_pool, column):
+			continue
+		price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
+		if price > 1e-6:
+			column_pool.append( (column, price) )
+
+	if len(column_pool) == 0:
+		return False
+
+	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
+	for column_coeff, price in column_pool:
+		if verbose:
+			print('LOG::HEURISTICIII: Generated Column', column_coeff)
+			print('LOG::HEURISTICIII: price', price)
+		mlp.update_contrs(column_coeff)
+	return True
 
 def LocalSearch(CLIQ: list, vLeft: list, E: list, pi: list, curCost: int):
-
-	while CanDelete(CLIQ, E, pi) or CanAdd(CLIQ, vLeft, E, pi):
-		continue
+	assert(0)
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
@@ -310,8 +341,8 @@ def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	y = subproblem.get_solution()
 	reduced_cost = subproblem.get_reduced_cost()
 	if verbose:
-		print('IPSOLVER::Generated Column: ', y)
-		print('reduced_cost-sigma: ', reduced_cost-sigma)
+		print('LOG::IPSOLVER::Generated Column: ', y)
+		print('LOG::reduced_cost-sigma: ', reduced_cost-sigma)
 
 	if reduced_cost - sigma >= -1e-6:
 		return False
@@ -332,19 +363,22 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 
-		if HeuristicI (mlp, verbose) == True:
-			continue
+		# if HeuristicI  (mlp, verbose=False) == True:
+		# 	continue
 
-		if HeuristicII(mlp, verbose) == True:
-			continue
+		# if HeuristicII(mlp, verbose) == True:
+		# 	continue
 
-		Q = GenerateQSET(mlp, G.n, S, verbose)
-		if len(Q):
-			mlp.AddCuttingPlanesMLP(Q)
-			pip.AddCuttingPlanesSUB(Q)
-			continue
+		# if HeuristicIII(mlp, verbose=True) == True:
+		# 	continue
 
-		if IPSolver(mlp, pip, verbose) == True:
+		# Q = GenerateQSET(mlp, G.n, S, verbose=True)
+		# if len(Q):
+		# 	mlp.AddCuttingPlanesMLP(Q)
+		# 	pip.AddCuttingPlanesSUB(Q)
+		# 	continue
+
+		if IPSolver(mlp, pip, verbose=False) == True:
 			continue
 
 		break
@@ -415,10 +449,10 @@ def TimeEstimate(n: int, S: int):
 	print(time_master, time_subprob)
 
 if __name__ == '__main__':
-	numpy.random.seed(5)
+	numpy.random.seed(60)
 
-	n = 15
-	S = 4
+	n = 29
+	S = 7
 
 	G = Graph(n)
 	G.PrintGraph()
