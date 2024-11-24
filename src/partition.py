@@ -54,7 +54,7 @@ class MLP:
 
 	def update_contrs(self, column_coeff: list):
 		## same column assertion
-		assert(column_coeff not in self.columns), "Generated a same column"
+		# assert(column_coeff not in self.columns), "Generated a same column"
 		self.columns.append(column_coeff)
 		for i in range(len(column_coeff)):
 			self.constrsLen[i] += column_coeff[i]
@@ -99,16 +99,16 @@ class MLP:
 	def AddCuttingPlanesMLP(self, Q: list):
 		xlp = self.model.getVars()
 		for Qi in Q:
-			xps: list[gurobipy.Var] = []
-			for i in range(len(xlp)):
-				if heuristic.subset(self.columns[i], Qi):
-					xps.append(xlp[i])
 			self.model.addConstr(
-				gurobipy.quicksum( xp for xp in xps ) <= ((sum(Qi) // S) * 1.0)
+				gurobipy.quicksum(
+					xlp[i] * int(heuristic.subset(self.columns[i], Qi))
+					for i in range(len(xlp))
+				) <= sum(Qi) // S
 			)
 
 		for Qi in Q:
 			assert(len(Qi) == self.G.n)
+			assert(Qi not in self.cutting_planes), f'Generated a duplicated cutting plane {Qi}'
 			self.cutting_planes.append(Qi)
 
 class SUB:
@@ -154,10 +154,12 @@ class SUB:
 	def AddCuttingPlanesSUB(self, Q: list):
 		y = self.model.getVars()
 		for Qi in Q:
-			for i in range(n):
-				if Qi[i]:
-					continue
-				self.model.addConstr(y[i] >= 1)
+			assert(len(Qi) == self.G.n)
+			self.model.addConstr(
+				gurobipy.quicksum(
+					(1-Qi[i]) * y[i] for i in range(self.G.n)
+				) >= 1
+			)
 
 def PrintVarX(xlp: list[gurobipy.Var]):
 	for var in xlp:
@@ -180,13 +182,13 @@ def GenerateQSET(mlp: MLP, n, S, verbose: bool):
 				continue
 			Pj = columns[j]
 
-			Q = [Pi[i] or Pj[i] for i in range(n)]
+			Q = [int(Pi[i] or Pj[i]) for i in range(n)]
+			if Q in QSet:
+				continue
 
 			## check inequality
 			q = sum(Q) // S + 1
 			if heuristic.GetSumofQ(xlp, columns, Q) > q - 1: ## violated
-				if Q in QSet:
-					continue
 				QSet.append(Q)
 				if verbose:
 					print('LOG::GenerateQSET: Generated Cutting Planes', Q)
@@ -216,7 +218,7 @@ def InPool(column_pool: list, column: list) -> bool:
 def MaintainPool(column_pool: list, column: list, price: float):
 	MaxLen = 10
 	if InPool(column_pool, column):
-		return 
+		return
 	if len(column_pool) < MaxLen:
 		column_pool.append( CompareClass( (column, price) ) )
 		if len(column_pool) == MaxLen:
@@ -232,8 +234,8 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for i in range(mlp.G.n):
-		cloest_i = mlp.G.closest_vertex[i][:2 * mlp.S - 1]
-		for size in range(mlp.S, mlp.S+3):
+		cloest_i = mlp.G.closest_vertex[i][:mlp.S*2]
+		for size in range(mlp.S, mlp.S*2):
 			for cluster in combinations(cloest_i, size):
 				column = [int(v in cluster) for v in mlp.G.V]
 				price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
@@ -250,7 +252,7 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICI: Generated Column', column_coeff)
-			print('LOG::HEURISTICI: price', price)
+			# print('LOG::HEURISTICI: price', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
@@ -342,7 +344,8 @@ def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	reduced_cost = subproblem.get_reduced_cost()
 	if verbose:
 		print('LOG::IPSOLVER::Generated Column: ', y)
-		print('LOG::reduced_cost-sigma: ', reduced_cost-sigma)
+		print('LOG::IPSOLVER::price', sigma-reduced_cost)
+		# print('LOG::IPSOLVER::price:', - masterproblem.G.Weight(y) + sum([y[i] * pi[i] for i in range(len(y))]) + sigma)
 
 	if reduced_cost - sigma >= -1e-6:
 		return False
@@ -362,8 +365,10 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		if mlp.model.Status == GRB.INFEASIBLE:
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
+		else:
+			print('Best Objective Value: ', mlp.model.ObjVal)
 
-		# if HeuristicI  (mlp, verbose=False) == True:
+		# if HeuristicI(mlp, verbose) == True:
 		# 	continue
 
 		# if HeuristicII(mlp, verbose) == True:
@@ -372,13 +377,13 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		# if HeuristicIII(mlp, verbose=True) == True:
 		# 	continue
 
-		# Q = GenerateQSET(mlp, G.n, S, verbose=True)
-		# if len(Q):
-		# 	mlp.AddCuttingPlanesMLP(Q)
-		# 	pip.AddCuttingPlanesSUB(Q)
-		# 	continue
+		Q = GenerateQSET(mlp, G.n, S, verbose)
+		if len(Q):
+			mlp.AddCuttingPlanesMLP(Q)
+			pip.AddCuttingPlanesSUB(Q)
+			continue
 
-		if IPSolver(mlp, pip, verbose=False) == True:
+		if IPSolver(mlp, pip, verbose) == True:
 			continue
 
 		break
@@ -451,12 +456,12 @@ def TimeEstimate(n: int, S: int):
 if __name__ == '__main__':
 	numpy.random.seed(60)
 
-	n = 29
-	S = 7
+	n = 41
+	S = 4
 
 	G = Graph(n)
 	G.PrintGraph()
 	mlp = SolveNode(G, S, verbose=True)
-	print(mlp.model.ObjVal)
+	print('ObjVal', mlp.model.ObjVal)
 
 	PrintVarX(mlp.model.getVars())
