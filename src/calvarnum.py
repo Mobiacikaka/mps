@@ -1,12 +1,11 @@
 from math import factorial
 
-def CombinationCount(n: int, k: int):
-	return factorial(n) / (factorial(n-k) * factorial(k))
+def CombinationCount(n: int, k: int) -> int:
+	return int(factorial(n) / (factorial(n-k) * factorial(k)))
 
 if __name__ == '__main__':
-	N = 20
-	S = 10
-	# a = 0
-	# for i in range(S, N-S+1):
-	# 	a += CombinationCount(N, i)
-	print(CombinationCount(N, S))
+	S = 7
+	c = 0
+	for size in range(S, S*2):
+		c += CombinationCount(S*2, size)
+	print(c)

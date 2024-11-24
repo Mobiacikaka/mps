@@ -39,18 +39,29 @@ class MLP:
 
 	def __set_contrs(self) -> None:
 		self.constrs = self.model.addConstrs(
-			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) == 1 for _ in range(self.G.n)
+			gurobipy.quicksum( self.x[i] * self.columns[i][j] for i in range(len(self.x)) ) == 1 for j in range(self.G.n)
 		)
 		self.constrs2 = self.model.addConstr(
 			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= math.floor(self.G.n / self.S)
 		)
 
 	def __set_vars(self) -> None:
-		self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name='x0'))
-		self.n_dim = 1
-		self.n_col = 1
-		self.columns = [[1] * self.G.n]
-		self.constrsLen = [1] * self.G.n
+		# self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name='x0'))
+		# self.n_dim = 1
+		# self.n_col = 1
+		# self.columns = [[1] * self.G.n]
+		self.constrsLen = [0] * self.G.n
+
+		self.columns = [[0] * self.G.n for _ in range(self.G.n // self.S)]
+		for i in range(self.G.n):
+			self.columns[i % (self.G.n // self.S)][i] = 1
+		for column in self.columns:
+			self.x.append(
+				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_dim}')
+			)
+			self.n_dim += 1
+			for i in range(self.G.n):
+				self.constrsLen[i] += column[i]
 
 	def update_contrs(self, column_coeff: list):
 		## same column assertion
@@ -183,8 +194,7 @@ def GenerateQSET(mlp: MLP, n, S, verbose: bool):
 			Pj = columns[j]
 
 			Q = [int(Pi[i] or Pj[i]) for i in range(n)]
-			# if Q in QSet or Q in mlp.cutting_planes:
-			if Q in QSet:
+			if Q in QSet or Q in mlp.cutting_planes:
 				continue
 
 			## check inequality
@@ -216,8 +226,7 @@ def InPool(column_pool: list, column: list) -> bool:
 			return True
 	return False
 
-def MaintainPool(column_pool: list, column: list, price: float):
-	MaxLen = 10
+def MaintainPool(column_pool: list, column: list, price: float, MaxLen=10):
 	if InPool(column_pool, column):
 		return
 	if len(column_pool) < MaxLen:
