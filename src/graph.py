@@ -1,4 +1,5 @@
 import numpy
+import itertools
 
 class Graph:
 	def __init__(self, n: int) -> None:
@@ -8,6 +9,17 @@ class Graph:
 			sorted(self.V, key=lambda x: self.E[i][x])
 			for i in range(self.n)
 		]
+
+	def GenerateCandidateColumns(self, S: int):
+		self.candidate_columns = []
+		for i in range(self.n):
+			candidate_columns_i = []
+			closest_vertex = sorted(self.V, key=lambda x: self.E[i][x])[:2*S]
+			for size in range(S, S*2):
+				for cluster in itertools.combinations(closest_vertex, size):
+					column = [int(i in cluster) for i in range(self.n)]
+					candidate_columns_i.append(column)
+			self.candidate_columns.append(candidate_columns_i)
 
 	## Random create edges
 	def __createGraph__(self, n: int):
