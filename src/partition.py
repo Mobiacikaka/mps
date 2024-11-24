@@ -183,6 +183,7 @@ def GenerateQSET(mlp: MLP, n, S, verbose: bool):
 			Pj = columns[j]
 
 			Q = [int(Pi[i] or Pj[i]) for i in range(n)]
+			# if Q in QSet or Q in mlp.cutting_planes:
 			if Q in QSet:
 				continue
 
@@ -368,16 +369,16 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		else:
 			print('Best Objective Value: ', mlp.model.ObjVal)
 
-		# if HeuristicI(mlp, verbose) == True:
-		# 	continue
+		if HeuristicI(mlp, verbose) == True:
+			continue
 
-		# if HeuristicII(mlp, verbose) == True:
-		# 	continue
+		if HeuristicII(mlp, verbose) == True:
+			continue
 
 		# if HeuristicIII(mlp, verbose=True) == True:
 		# 	continue
 
-		Q = GenerateQSET(mlp, G.n, S, verbose)
+		Q = GenerateQSET(mlp, G.n, S, verbose=True)
 		if len(Q):
 			mlp.AddCuttingPlanesMLP(Q)
 			pip.AddCuttingPlanesSUB(Q)
@@ -456,12 +457,13 @@ def TimeEstimate(n: int, S: int):
 if __name__ == '__main__':
 	numpy.random.seed(60)
 
-	n = 41
-	S = 4
+	n = 29
+	S = 7
 
 	G = Graph(n)
+	# G.GenerateCandidateColumns(S)
 	G.PrintGraph()
-	mlp = SolveNode(G, S, verbose=True)
+	mlp = SolveNode(G, S, verbose=False)
 	print('ObjVal', mlp.model.ObjVal)
 
 	PrintVarX(mlp.model.getVars())
