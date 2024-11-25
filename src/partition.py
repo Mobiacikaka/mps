@@ -283,17 +283,13 @@ def MaintainPool(column_pool: list, column: list, price: float, MaxLen=10):
 
 def HeuristicI  (mlp: MLP, verbose: bool):
 	if verbose:
-		print('LOG::HEURISTICI')
+		print(
+			f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			'LOG::HEURISTICI'
+		)
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for column, wP in mlp.candidate_columns:
-	# for i in range(mlp.G.n):
-	# 	cloest_i = mlp.G.closest_vertex[i][:mlp.S*2]
-	# 	for size in range(mlp.S, mlp.S+1):
-	# 		for cluster in combinations(cloest_i, size):
-				# cluster = list(cluster)
-				# column = [int(v in cluster) for v in mlp.G.V]
-				# price = PriceCluster(cluster, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
 				price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
 				if price-wP > 1e-6:
 					MaintainPool(column_pool, column, price-wP)
@@ -305,14 +301,20 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 
 	for column, price in column_pool:
 		if verbose:
-			print('LOG::HEURISTICI: Generated Column', column)
+			print(
+				f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				'LOG::HEURISTICI: Generated Column', column
+			)
 			# print('LOG::HEURISTICI: price', price)
 		mlp.update_contrs(column)
 	return True
 
 def HeuristicII (mlp: MLP, verbose: bool):
 	if verbose:
-		print('LOG::HEURISTICII')
+		print(
+			f'{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			'LOG::HEURISTICII'
+		)
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for Qi in mlp.cutting_planes:
@@ -326,9 +328,10 @@ def HeuristicII (mlp: MLP, verbose: bool):
 		for size in range(minsize, maxsize+1):
 			for cluster in combinations(index, size):
 				column = [int(x in cluster) for x in range(mlp.G.n)]
-				price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
-				if price > 1e-6:
-					MaintainPool(column_pool, column, price)
+				price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+				wP = mlp.G.Weight(column)
+				if price - wP > 1e-6:
+					MaintainPool(column_pool, column, price-wP)
 
 	if len(column_pool) == 0:
 		return False
@@ -336,14 +339,20 @@ def HeuristicII (mlp: MLP, verbose: bool):
 	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
 	for column_coeff, price in column_pool:
 		if verbose:
-			print('LOG::HEURISTICII: Generated Column', column_coeff)
+			print(
+				f'{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				'LOG::HEURISTICII: Generated Column', column_coeff
+			)
 			# print('LOG::HEURISTICII: price', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
 def HeuristicIII(mlp: MLP, verbose: bool):
 	if verbose:
-		print('LOG::HEURISTICIII')
+		print(
+			f'{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			'LOG::HEURISTICIII'
+		)
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for i in range(mlp.G.n):
@@ -368,11 +377,10 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 			else:
 				break
 		column = [int(x in CLIQ) for x in range(mlp.G.n)]
-		if InPool(column_pool, column):
-			continue
-		price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
-		if price > 1e-6:
-			column_pool.append( (column, price) )
+		price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+		wP = mlp.G.Weight(column)
+		if price - wP > 1e-6:
+			column_pool.append( (column, price-wP) )
 
 	if len(column_pool) == 0:
 		return False
@@ -380,8 +388,10 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
 	for column_coeff, price in column_pool:
 		if verbose:
-			print('LOG::HEURISTICIII: Generated Column', column_coeff)
-			# print('LOG::HEURISTICIII: price', price)
+			print(
+				f'{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				'LOG::HEURISTICIII: Generated Column', column_coeff
+			)
 		mlp.update_contrs(column_coeff)
 	return True
 
@@ -390,7 +400,10 @@ def LocalSearch(CLIQ: list, vLeft: list, E: list, pi: list, curCost: int):
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	if verbose:
-		print('LOG::IPSOLVER')
+		print(
+			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			'LOG::IPSOLVER'
+		)
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
 	subproblem.set_objective(pi)
 	subproblem.solve()
@@ -399,7 +412,10 @@ def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	y = subproblem.get_solution()
 	reduced_cost = subproblem.get_reduced_cost()
 	if verbose:
-		print('LOG::IPSOLVER::Generated Column: ', y)
+		print(
+			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			'LOG::IPSOLVER::Generated Column: ', y
+		)
 		# print('LOG::IPSOLVER::price', sigma-reduced_cost)
 		# print('LOG::IPSOLVER::price:', - masterproblem.G.Weight(y) + sum([y[i] * pi[i] for i in range(len(y))]) + sigma)
 
