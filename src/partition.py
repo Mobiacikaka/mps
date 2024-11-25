@@ -233,9 +233,7 @@ def GenerateQSET(mlp: MLP, n, S, verbose: bool):
 					print('LOG::GenerateQSET: Generated Cutting Planes', Q)
 	return QSet
 
-def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, G: Graph, Q: list):
-	wP = G.Weight(column)
-
+def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
 	assert(len(column) == len(pi))
 	pi_sum = 0.0
 	for i in range(len(column)):
@@ -246,7 +244,7 @@ def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, G: Graph
 	for i in range(len(sigma_list)):
 		sigma_sum += int(heuristic.subset(column, Q[i])) * sigma_list[i]
 
-	return pi_sum + sigma + sigma_sum - wP
+	return pi_sum + sigma + sigma_sum
 
 def PriceCluster(cluster: list, pi: list, sigma: float, sigma_list, G: Graph, Q: list):
 	wP = G.weight(cluster)
@@ -288,15 +286,17 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 		print('LOG::HEURISTICI')
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
-	for i in range(mlp.G.n):
-		cloest_i = mlp.G.closest_vertex[i][:mlp.S*2]
-		for size in range(mlp.S, mlp.S+1):
-			for cluster in combinations(cloest_i, size):
-				cluster = list(cluster)
-				column = [int(v in cluster) for v in mlp.G.V]
-				price = PriceCluster(cluster, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
-				if price > 1e-6:
-					MaintainPool(column_pool, column, price)
+	for column, wP in mlp.candidate_columns:
+	# for i in range(mlp.G.n):
+	# 	cloest_i = mlp.G.closest_vertex[i][:mlp.S*2]
+	# 	for size in range(mlp.S, mlp.S+1):
+	# 		for cluster in combinations(cloest_i, size):
+				# cluster = list(cluster)
+				# column = [int(v in cluster) for v in mlp.G.V]
+				# price = PriceCluster(cluster, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
+				price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+				if price-wP > 1e-6:
+					MaintainPool(column_pool, column, price-wP)
 
 	## Add the 10 most violating columns from the column pool
 	## with no more than 10 columns on the same vertex added.
@@ -337,7 +337,7 @@ def HeuristicII (mlp: MLP, verbose: bool):
 	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICII: Generated Column', column_coeff)
-			print('LOG::HEURISTICII: price', price)
+			# print('LOG::HEURISTICII: price', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
@@ -381,7 +381,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 	for column_coeff, price in column_pool:
 		if verbose:
 			print('LOG::HEURISTICIII: Generated Column', column_coeff)
-			print('LOG::HEURISTICIII: price', price)
+			# print('LOG::HEURISTICIII: price', price)
 		mlp.update_contrs(column_coeff)
 	return True
 
@@ -424,13 +424,10 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 	runtime_CP = 0.0 ##.0 cutting planes time
 
 	while True:
-		if TIME_ESTIMATION_FLAG:
-			stime = time.time()
-			mlp.solve()
-			etime = time.time()
-			runtime_MLP += etime - stime
-		else:
-			mlp.solve()
+		stime = time.time()
+		mlp.solve()
+		etime = time.time()
+		runtime_MLP += etime - stime
 		# mlp.write('master.lp')
 		if mlp.model.Status == GRB.INFEASIBLE:
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
@@ -438,30 +435,29 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		else:
 			print('Best Objective Value: ', mlp.model.ObjVal)
 
-		if TIME_ESTIMATION_FLAG:
-			stime = time.time()
-			flag = HeuristicI(mlp, verbose)
-			etime = time.time()
-			runtime_H1 += etime - stime
-			if flag == True:
-				continue
-		else:
-			if HeuristicI(mlp, verbose) == True:
-				continue
+		## Generate Columns using HeuristicI
+		stime = time.time()
+		flag = HeuristicI(mlp, verbose)
+		etime = time.time()
+		runtime_H1 += etime - stime
+		if flag == True:
+			continue
 
-		# if TIME_ESTIMATION_FLAG:
-		# 	stime = time.time()
-		# 	flag = HeuristicII(mlp, verbose)
-		# 	etime = time.time()
-		# 	runtime_H2 += etime - stime
-		# 	if flag == True:
-		# 		continue
-		# else:
-		# 	if HeuristicII(mlp, verbose) == True:
-		# 		continue
-
-		# if HeuristicIII(mlp, verbose=True) == True:
+		## Generate Columns using HeuristicII
+		# stime = time.time()
+		# flag = HeuristicII(mlp, verbose)
+		# etime = time.time()
+		# runtime_H2 += etime - stime
+		# if flag == True:
 		# 	continue
+
+		## Generate Columns using HeuristicIII
+		stime = time.time()
+		flag = HeuristicIII(mlp, verbose)
+		etime = time.time()
+		runtime_H3 += etime - stime
+		if flag == True:
+			continue
 
 		## Generate Cutting Planes
 		# stime = time.time()
@@ -495,69 +491,6 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 		print()
 	return mlp
 
-def TimeEstimate(n: int, S: int):
-	G = Graph(n)
-	G.PrintGraph()
-
-	cppmin = MLP(G, S)
-	cppmin.create_model()
-	sub_prob = SUB(G, S)
-	sub_prob.create_model()
-	PI = []
-
-	time_master = 0.0
-	time_subprob = 0.0
-
-	while True:
-		time_start = time.time()
-
-		cppmin.solve()
-		cppmin.write('model_linear.lp')
-		if cppmin.model.Status == GRB.INFEASIBLE:
-			print('INFEASIBLE')
-			exit()
-		pi, sigma, sigma_list = cppmin.get_dual_vars()
-		assert(pi not in PI), 'Generated a same pi'
-		PI.append(pi)
-
-		time_end = time.time()
-		time_master += time_end - time_start
-
-		time_start = time.time()
-
-		sub_prob.set_objective(pi)
-		sub_prob.solve()
-		sub_prob.write()
-
-		time_end = time.time()
-		time_subprob += time_end - time_start
-
-		## 6: If the gap between the value of the LP relaxation and the value of the incumbent integer solution is sufficiently small, STOP with optimality
-		y = sub_prob.get_solution()
-		print('Generate Column: ', y)
-		reduced_cost = sub_prob.get_reduced_cost()
-		print('reduced_cost-sigma: ', reduced_cost-sigma)
-
-		if reduced_cost >= sigma - 1e-6:
-		# if reduced_cost - sigma >= 0:
-			break
-
-		cppmin.update_contrs(column_coeff=y)
-		# y = [1-x for x in y]
-		# cppmin.update_contrs(column_coeff=y)
-
-	print()
-	# PrintVarX(cppmin.model.getVars())
-
-	cppmin.to_int()
-	cppmin.solve(flag=1)
-	cppmin.write('model_int.lp')
-
-	print()
-	# PrintVarX(cppmin.model.getVars())
-
-	print(time_master, time_subprob)
-
 def main():
 	numpy.random.seed(60)
 
@@ -565,7 +498,6 @@ def main():
 	S = 7
 
 	G = Graph(n)
-	# G.GenerateCandidateColumns(S)
 	G.PrintGraph()
 	mlp = SolveNode(G, S, verbose=True)
 	print('ObjVal', mlp.model.ObjVal)
