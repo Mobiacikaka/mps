@@ -141,7 +141,7 @@ class MLP:
 				gurobipy.quicksum(
 					xlp[i] * int(heuristic.subset(self.columns[i], Qi))
 					for i in range(len(xlp))
-				) <= sum(Qi) // S
+				) <= sum(Qi) // self.S
 			)
 
 		for Qi in Q:
@@ -248,6 +248,23 @@ def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, G: Graph
 
 	return pi_sum + sigma + sigma_sum - wP
 
+def PriceCluster(cluster: list, pi: list, sigma: float, sigma_list, G: Graph, Q: list):
+	wP = G.weight(cluster)
+
+	pi_sum = 0.0
+	for i in cluster:
+		pi_sum += pi[i]
+
+	assert(len(sigma_list) == len(Q))
+	sigma_sum = 0.0
+	for q in range(len(sigma_list)):
+		mul = 1.0
+		for i in cluster:
+			mul *= Q[q][i]
+		sigma_sum += mul
+
+	return pi_sum + sigma + sigma_sum - wP
+
 def InPool(column_pool: list, columnA: list) -> bool:
 	for columnB, _ in column_pool:
 		if columnA == columnB:
@@ -271,18 +288,15 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 		print('LOG::HEURISTICI')
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
-	# for column in mlp.candidate_columns:
-	atime = time.time()
 	for i in range(mlp.G.n):
 		cloest_i = mlp.G.closest_vertex[i][:mlp.S*2]
 		for size in range(mlp.S, mlp.S+1):
 			for cluster in combinations(cloest_i, size):
+				cluster = list(cluster)
 				column = [int(v in cluster) for v in mlp.G.V]
-				price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
+				price = PriceCluster(cluster, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
 				if price > 1e-6:
 					MaintainPool(column_pool, column, price)
-	btime = time.time()
-	# print(btime - atime)
 
 	## Add the 10 most violating columns from the column pool
 	## with no more than 10 columns on the same vertex added.
@@ -347,7 +361,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 					bestCost = curCost
 					bestV = v
 			## judge to continue or break
-			if len(CLIQ) < S or bestCost > 0:
+			if len(CLIQ) < mlp.S or bestCost > 0:
 				CLIQ.append(bestV)
 				vLeft.remove(bestV)
 				continue
@@ -544,7 +558,7 @@ def TimeEstimate(n: int, S: int):
 
 	print(time_master, time_subprob)
 
-if __name__ == '__main__':
+def main():
 	numpy.random.seed(60)
 
 	n = 29
@@ -557,3 +571,6 @@ if __name__ == '__main__':
 	print('ObjVal', mlp.model.ObjVal)
 
 	PrintVarX(mlp.model.getVars(), mlp.columns)
+
+if __name__ == '__main__':
+	main()

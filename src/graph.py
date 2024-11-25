@@ -42,13 +42,25 @@ class Graph:
 			j = EdgeName[k][1]
 			self.E[i][j] = self.E[j][i] = 0.5**(k-20)
 
-	def Weight(self, subgraph: list=[]) -> int:
+	## subgraph consist of only 0 and 1
+	def Weight(self, subgraph: list=[]) -> float:
 		if len(subgraph) == 0:
 			subgraph = [1] * self.n
 		return sum(
 			[self.E[i][j] * subgraph[i] * subgraph[j]
 			for i in range(self.n-1) for j in range(i+1, self.n)]
 		)
+
+	## subgraph consist of number less than n
+	def weight(self, subgraph: list=[]) -> float:
+		Len = len(subgraph)
+		s = 0
+		for i in range(Len-1):
+			for j in range(i+1, Len):
+				vi = subgraph[i]
+				vj = subgraph[j]
+				s += self.E[vi][vj]
+		return s
 
 	def PrintGraph(self, filename: str='Graph.txt'):
 		f = open(filename, 'w')
