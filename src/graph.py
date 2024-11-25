@@ -11,15 +11,14 @@ class Graph:
 		]
 
 	def GenerateCandidateColumns(self, S: int):
-		self.candidate_columns = []
+		candidate_columns = []
 		for i in range(self.n):
-			candidate_columns_i = []
 			closest_vertex = sorted(self.V, key=lambda x: self.E[i][x])[:2*S]
 			for size in range(S, S*2):
 				for cluster in itertools.combinations(closest_vertex, size):
 					column = [int(i in cluster) for i in range(self.n)]
-					candidate_columns_i.append(column)
-			self.candidate_columns.append(candidate_columns_i)
+					candidate_columns.append(column)
+		return candidate_columns
 
 	## Random create edges
 	def __createGraph__(self, n: int):

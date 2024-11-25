@@ -1,4 +1,4 @@
-import numpy, time, math, colorama, heapq
+import numpy, time, math, colorama, heapq, itertools, datetime
 from gurobipy import GRB
 from graph import Graph
 from itertools import combinations
@@ -13,13 +13,69 @@ class MLP:
 	def __init__(self, G: Graph, S: int) -> None:
 		self.G = G
 		self.S = S
-		self.n_col = 0 ##
-		self.n_dim = 0 ## 变量数量
+		self.n_col = 0 ## 列数量
 		self.cutting_planes = []
+
+	def __set_contrs(self) -> None:
+		self.constrs = self.model.addConstrs(
+			gurobipy.quicksum( self.x[i] * self.columns[i][j] for i in range(len(self.x)) ) == 1 for j in range(self.G.n)
+		)
+		self.constrs2 = self.model.addConstr(
+			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= math.floor(self.G.n / self.S)
+		)
+
+	def __set_vars(self) -> None:
+		self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name='x0'))
+		self.n_col = 1
+		self.columns = [[1] * self.G.n]
+
+		# self.columns = [[0] * self.G.n for _ in range(self.G.n // self.S)]
+		# for i in range(self.G.n):
+		# 	self.columns[i % (self.G.n // self.S)][i] = 1
+		# for column in self.columns:
+		# 	self.x.append(
+		# 		self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+		# 	)
+		# 	self.n_col += 1
+		# 	for i in range(self.G.n):
+		# 		self.constrsLen[i] += column[i]
+
+		# self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}'))
+		# self.columns = [[1] * self.G.n]
+		# self.n_col += 1
+		# column_pool = []
+		# for i in range(self.G.n):
+		# 	for cluster in itertools.combinations(self.G.closest_vertex[i][:self.S*2], self.S):
+		# 		column = [int(i in cluster) for i in range(self.G.n)]
+		# 		price = self.G.Weight(column)
+		# 		MaintainPool(column_pool=column_pool, column=column, price=price, MaxLen=100)
+
+		# for column, _ in column_pool:
+		# 	self.x.append(
+		# 		self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+		# 	)
+		# 	self.n_col += 1
+		# 	self.columns.append(column)
+
+		# self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}'))
+		# self.columns = [[1] * self.G.n]
+		# self.n_col = 1
+		# for i in range(self.G.n):
+		# 	for cluster in itertools.combinations(self.G.closest_vertex[i][:self.S*2], self.S):
+		# 		column = [int(i in cluster) for i in range(self.G.n)]
+		# 		self.columns.append(column)
+		# 		self.candidate_columns.remove(column)
+		# 		self.x.append(
+		# 			self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+		# 		)
+		# 		self.n_col += 1
+		pass
 
 	def create_model(self):
 		self.x = []
 		self.model = gurobipy.Model('Master')
+		self.candidate_columns = self.G.GenerateCandidateColumns(self.S)
+		print('candidate_columns:', len(self.candidate_columns))
 		self.__set_vars()
 		self.__set_contrs()
 
@@ -37,38 +93,10 @@ class MLP:
 			sigma_list = dual_values[self.G.n+1:]
 		return pi, sigma, sigma_list
 
-	def __set_contrs(self) -> None:
-		self.constrs = self.model.addConstrs(
-			gurobipy.quicksum( self.x[i] * self.columns[i][j] for i in range(len(self.x)) ) == 1 for j in range(self.G.n)
-		)
-		self.constrs2 = self.model.addConstr(
-			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= math.floor(self.G.n / self.S)
-		)
-
-	def __set_vars(self) -> None:
-		# self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name='x0'))
-		# self.n_dim = 1
-		# self.n_col = 1
-		# self.columns = [[1] * self.G.n]
-		self.constrsLen = [0] * self.G.n
-
-		self.columns = [[0] * self.G.n for _ in range(self.G.n // self.S)]
-		for i in range(self.G.n):
-			self.columns[i % (self.G.n // self.S)][i] = 1
-		for column in self.columns:
-			self.x.append(
-				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_dim}')
-			)
-			self.n_dim += 1
-			for i in range(self.G.n):
-				self.constrsLen[i] += column[i]
-
 	def update_contrs(self, column_coeff: list):
 		## same column assertion
-		# assert(column_coeff not in self.columns), "Generated a same column"
+		assert(column_coeff not in self.columns), "Generated a same column"
 		self.columns.append(column_coeff)
-		for i in range(len(column_coeff)):
-			self.constrsLen[i] += column_coeff[i]
 
 		_column_coeff = column_coeff
 		column_coeff = _column_coeff.copy()
@@ -85,10 +113,9 @@ class MLP:
 			obj=self.G.Weight(column_coeff),
 			lb=0,
 			vtype=GRB.CONTINUOUS,
-			name='x'+str(self.n_dim),
+			name='x'+str(self.n_col),
 			column=column
 		)
-		self.n_dim += 1
 		self.n_col += 1
 
 	def print_status(self):
@@ -172,10 +199,11 @@ class SUB:
 				) >= 1
 			)
 
-def PrintVarX(xlp: list[gurobipy.Var]):
-	for var in xlp:
+def PrintVarX(xlp: list[gurobipy.Var], columns):
+	for i in range(len(xlp)):
+		var = xlp[i]
 		if var.X != 0.0:
-			print(f'{var.VarName}={var.X}', end='\n')
+			print(f'{var.VarName}\t= {var.X}\t{columns[i]}', end='\n')
 	print()
 
 def GenerateQSET(mlp: MLP, n, S, verbose: bool):
@@ -220,9 +248,9 @@ def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, G: Graph
 
 	return pi_sum + sigma + sigma_sum - wP
 
-def InPool(column_pool: list, column: list) -> bool:
+def InPool(column_pool: list, columnA: list) -> bool:
 	for columnB, _ in column_pool:
-		if column == columnB:
+		if columnA == columnB:
 			return True
 	return False
 
@@ -243,27 +271,29 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 		print('LOG::HEURISTICI')
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
+	# for column in mlp.candidate_columns:
+	atime = time.time()
 	for i in range(mlp.G.n):
 		cloest_i = mlp.G.closest_vertex[i][:mlp.S*2]
-		for size in range(mlp.S, mlp.S*2):
+		for size in range(mlp.S, mlp.S+1):
 			for cluster in combinations(cloest_i, size):
 				column = [int(v in cluster) for v in mlp.G.V]
 				price = PriceColumn(column, pi, sigma, sigma_list, mlp.G, mlp.cutting_planes)
-				if InPool(column_pool, column):
-					continue
 				if price > 1e-6:
 					MaintainPool(column_pool, column, price)
+	btime = time.time()
+	# print(btime - atime)
 
 	## Add the 10 most violating columns from the column pool
 	## with no more than 10 columns on the same vertex added.
 	if len(column_pool) == 0:
 		return False
 
-	for column_coeff, price in column_pool:
+	for column, price in column_pool:
 		if verbose:
-			print('LOG::HEURISTICI: Generated Column', column_coeff)
+			print('LOG::HEURISTICI: Generated Column', column)
 			# print('LOG::HEURISTICI: price', price)
-		mlp.update_contrs(column_coeff)
+		mlp.update_contrs(column)
 	return True
 
 def HeuristicII (mlp: MLP, verbose: bool):
@@ -345,16 +375,18 @@ def LocalSearch(CLIQ: list, vLeft: list, E: list, pi: list, curCost: int):
 	assert(0)
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
+	if verbose:
+		print('LOG::IPSOLVER')
 	pi, sigma, sigma_list = masterproblem.get_dual_vars()
 	subproblem.set_objective(pi)
 	subproblem.solve()
-	subproblem.write()
+	# subproblem.write()
 
 	y = subproblem.get_solution()
 	reduced_cost = subproblem.get_reduced_cost()
 	if verbose:
 		print('LOG::IPSOLVER::Generated Column: ', y)
-		print('LOG::IPSOLVER::price', sigma-reduced_cost)
+		# print('LOG::IPSOLVER::price', sigma-reduced_cost)
 		# print('LOG::IPSOLVER::price:', - masterproblem.G.Weight(y) + sum([y[i] * pi[i] for i in range(len(y))]) + sigma)
 
 	if reduced_cost - sigma >= -1e-6:
@@ -369,35 +401,84 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 	pip = SUB(G, S) ## Price Integer Problem
 	pip.create_model()
 
+	TIME_ESTIMATION_FLAG = True
+	runtime_MLP = 0.0
+	runtime_SUB = 0.0
+	runtime_H1 = 0.0
+	runtime_H2 = 0.0
+	runtime_H3 = 0.0
+	runtime_CP = 0.0 ##.0 cutting planes time
+
 	while True:
-		mlp.solve()
-		mlp.write('master.lp')
+		if TIME_ESTIMATION_FLAG:
+			stime = time.time()
+			mlp.solve()
+			etime = time.time()
+			runtime_MLP += etime - stime
+		else:
+			mlp.solve()
+		# mlp.write('master.lp')
 		if mlp.model.Status == GRB.INFEASIBLE:
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 		else:
 			print('Best Objective Value: ', mlp.model.ObjVal)
 
-		if HeuristicI(mlp, verbose) == True:
-			continue
+		if TIME_ESTIMATION_FLAG:
+			stime = time.time()
+			flag = HeuristicI(mlp, verbose)
+			etime = time.time()
+			runtime_H1 += etime - stime
+			if flag == True:
+				continue
+		else:
+			if HeuristicI(mlp, verbose) == True:
+				continue
 
-		if HeuristicII(mlp, verbose) == True:
-			continue
+		# if TIME_ESTIMATION_FLAG:
+		# 	stime = time.time()
+		# 	flag = HeuristicII(mlp, verbose)
+		# 	etime = time.time()
+		# 	runtime_H2 += etime - stime
+		# 	if flag == True:
+		# 		continue
+		# else:
+		# 	if HeuristicII(mlp, verbose) == True:
+		# 		continue
 
 		# if HeuristicIII(mlp, verbose=True) == True:
 		# 	continue
 
-		Q = GenerateQSET(mlp, G.n, S, verbose=True)
-		if len(Q):
-			mlp.AddCuttingPlanesMLP(Q)
-			pip.AddCuttingPlanesSUB(Q)
-			continue
+		## Generate Cutting Planes
+		# stime = time.time()
+		# Q = GenerateQSET(mlp, G.n, S, verbose=True)
+		# if len(Q):
+		# 	mlp.AddCuttingPlanesMLP(Q)
+		# 	pip.AddCuttingPlanesSUB(Q)
+		# etime = time.time()
+		# runtime_CP += etime - stime
+		# if len(Q):
+		# 	continue
 
-		if IPSolver(mlp, pip, verbose) == True:
+		## Column Generation using IPSolver
+		stime = time.time()
+		flag = IPSolver(mlp, pip, verbose)
+		etime = time.time()
+		runtime_SUB += etime - stime
+		if flag == True:
 			continue
 
 		break
 
+	if TIME_ESTIMATION_FLAG:
+		print()
+		print('RUNTIME Master Problem:\t', runtime_MLP)
+		print('RUNTIME HeuristicI:\t', runtime_H1)
+		print('RUNTIME HeuristicII:\t', runtime_H2)
+		print('RUNTIME HeuristicIII:\t', runtime_H3)
+		print('RUNTIME Cutting Planes:\t', runtime_CP)
+		print('RUNTIME Sub Problem:\t', runtime_SUB)
+		print()
 	return mlp
 
 def TimeEstimate(n: int, S: int):
@@ -452,14 +533,14 @@ def TimeEstimate(n: int, S: int):
 		# cppmin.update_contrs(column_coeff=y)
 
 	print()
-	PrintVarX(cppmin.model.getVars())
+	# PrintVarX(cppmin.model.getVars())
 
 	cppmin.to_int()
 	cppmin.solve(flag=1)
 	cppmin.write('model_int.lp')
 
 	print()
-	PrintVarX(cppmin.model.getVars())
+	# PrintVarX(cppmin.model.getVars())
 
 	print(time_master, time_subprob)
 
@@ -472,7 +553,7 @@ if __name__ == '__main__':
 	G = Graph(n)
 	# G.GenerateCandidateColumns(S)
 	G.PrintGraph()
-	mlp = SolveNode(G, S, verbose=False)
+	mlp = SolveNode(G, S, verbose=True)
 	print('ObjVal', mlp.model.ObjVal)
 
-	PrintVarX(mlp.model.getVars())
+	PrintVarX(mlp.model.getVars(), mlp.columns)
