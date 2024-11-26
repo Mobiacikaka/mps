@@ -77,3 +77,46 @@ class MLP:
 	def write(self, filename='model.lp'):
 		self.model.write(filename)
 
+
+	# def __set_vars(self):
+		# self.columns = [[0] * self.G.n for _ in range(self.G.n // self.S)]
+		# for i in range(self.G.n):
+		# 	self.columns[i % (self.G.n // self.S)][i] = 1
+		# for column in self.columns:
+		# 	self.x.append(
+		# 		self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+		# 	)
+		# 	self.n_col += 1
+		# 	for i in range(self.G.n):
+		# 		self.constrsLen[i] += column[i]
+
+		# self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}'))
+		# self.columns = [[1] * self.G.n]
+		# self.n_col += 1
+		# column_pool = []
+		# for i in range(self.G.n):
+		# 	for cluster in itertools.combinations(self.G.closest_vertex[i][:self.S*2], self.S):
+		# 		column = [int(i in cluster) for i in range(self.G.n)]
+		# 		price = self.G.Weight(column)
+		# 		MaintainPool(column_pool=column_pool, column=column, price=price, MaxLen=100)
+
+		# for column, _ in column_pool:
+		# 	self.x.append(
+		# 		self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+		# 	)
+		# 	self.n_col += 1
+		# 	self.columns.append(column)
+
+		# self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}'))
+		# self.columns = [[1] * self.G.n]
+		# self.n_col = 1
+		# for i in range(self.G.n):
+		# 	for cluster in itertools.combinations(self.G.closest_vertex[i][:self.S*2], self.S):
+		# 		column = [int(i in cluster) for i in range(self.G.n)]
+		# 		self.columns.append(column)
+		# 		self.candidate_columns.remove(column)
+		# 		self.x.append(
+		# 			self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+		# 		)
+		# 		self.n_col += 1
+

@@ -1,6 +1,18 @@
 import numpy
 import itertools
 
+def convert_string_to_list(string: str):
+	s = []
+	for i in string:
+		s.append(int(i))
+	return s
+
+def convert_list_to_string(lst: list):
+	s = ''
+	for i in lst:
+		s += str(i)
+	return s
+
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
@@ -9,31 +21,6 @@ class Graph:
 			sorted(self.V, key=lambda x: self.E[i][x])
 			for i in range(self.n)
 		]
-
-	def __convert_subgraph_from_string_to_list__(self, subgraph: str):
-		assert(len(subgraph) == self.n)
-		s = []
-		for i in subgraph:
-			s.append(int(i))
-		return s
-
-	def __convert_subgraph_from_list_to_string__(self, subgraph: list):
-		assert(len(subgraph) == self.n)
-		s = ''
-		for i in subgraph:
-			s += str(i)
-		return s
-
-	def GenerateCandidateColumns(self, S: int):
-		candidate_columns = []
-		for i in range(self.n):
-			closest_vertex = sorted(self.V, key=lambda x: self.E[i][x])[:2*S]
-			for size in range(S, S*2):
-				for cluster in itertools.combinations(closest_vertex, size):
-					column = [int(i in cluster) for i in range(self.n)]
-					s = self.weight(list(cluster))
-					candidate_columns.append( (column, s) )
-		return candidate_columns
 
 	## Random create edges
 	def __createGraph__(self, n: int):
@@ -65,11 +52,11 @@ class Graph:
 		return self.weight(cluster)
 
 	## subgraph consist of number less than n
-	def weight(self, subgraph: list=[]) -> float:
-		Len = len(subgraph)
+	def weight(self, subgraph: list) -> float:
+		length = len(subgraph)
 		s = 0
-		for i in range(Len-1):
-			for j in range(i+1, Len):
+		for i in range(length-1):
+			for j in range(i+1, length):
 				vi = subgraph[i]
 				vj = subgraph[j]
 				s += self.E[vi][vj]
