@@ -1,7 +1,6 @@
-import numpy, time, math, colorama, heapq, itertools, datetime
+import numpy, time, math, colorama, heapq, itertools
 from gurobipy import GRB
-from graph import Graph, convert_list_to_string, convert_string_to_list
-from itertools import combinations
+from graph import Graph
 import gurobipy
 import heuristic
 
@@ -187,12 +186,11 @@ class SUB:
 		self.model.write('sub_model.lp')
 
 	def AddCuttingPlanesSUB(self, Q: list):
-		y = self.model.getVars()
 		for Qi in Q:
 			assert(len(Qi) == self.G.n)
 			self.model.addConstr(
 				gurobipy.quicksum(
-					(1-Qi[i]) * y[i] for i in range(self.G.n)
+					(1-Qi[i]) * self.y[i] for i in range(self.G.n)
 				) >= 1
 			)
 
@@ -203,39 +201,44 @@ def PrintVarX(xlp: list[gurobipy.Var], columns):
 			print(f'{var.VarName}\t= {var.X}\t{columns[i]}', end='\n')
 	print()
 
-def GenerateQSET(mlp: MLP, n, S, verbose: bool):
+def GenerateQSET(mlp: MLP, verbose: bool):
 	if verbose:
 		print(
 			f'{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 			'LOG::GenerateQSET'
 		)
-	xlp = mlp.model.getVars()
-	columns = mlp.columns
 
-	QSet = []
-	for i in range(len(xlp)-1):
+	xlp = mlp.model.getVars()
+	float_xlp = []
+	for i in range(mlp.n_col):
 		if xlp[i].X == 0.0 or xlp[i].X == 1.0:
 			continue
-		Pi = columns[i]
+		float_xlp.append(i)
 
-		for j in range(i+1, len(xlp)):
-			if xlp[j].X == 0.0 or xlp[j].X == 1.0:
+	QSet = []
+	for i in range(len(float_xlp)-1):
+		Pi = mlp.columns[float_xlp[i]]
+		for j in range(i+1, len(float_xlp)):
+			Pj = mlp.columns[float_xlp[j]]
+			Q = [int(Pi[k] or Pj[k]) for k in range(mlp.G.n)]
+			# if Q in QSet or Q in mlp.cutting_planes:
+			if Q in QSet:
 				continue
-			Pj = columns[j]
-
-			Q = [int(Pi[i] or Pj[i]) for i in range(n)]
-			if Q in QSet or Q in mlp.cutting_planes:
-				continue
-
-			## check inequality
-			q = sum(Q) // S + 1
-			if heuristic.GetSumofQ(xlp, columns, Q) > q - 1: ## violated
+			## violated (9)
+			q_minus = sum(Q) // mlp.S
+			sum_xp = 0.0
+			for k in range(len(float_xlp)):
+				if heuristic.subset(mlp.columns[float_xlp[k]], Q):
+					sum_xp += xlp[float_xlp[k]].X
+			if sum_xp - q_minus > 1e-6:
+				print(sum_xp)
 				QSet.append(Q)
-				if verbose:
-					print(
-						f'{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-						'LOG::GenerateQSET: Generated Cutting Planes', Q
-					)
+	if verbose:
+		for Q in QSet:
+			print(
+				f'{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				'LOG::GenerateQSET: Generated Cutting Planes', Q
+			)
 	return QSet
 
 def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
@@ -250,23 +253,6 @@ def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list)
 		sigma_sum += int(heuristic.subset(column, Q[i])) * sigma_list[i]
 
 	return pi_sum + sigma + sigma_sum
-
-def PriceCluster(cluster: list, pi: list, sigma: float, sigma_list, G: Graph, Q: list):
-	wP = G.weight(cluster)
-
-	pi_sum = 0.0
-	for i in cluster:
-		pi_sum += pi[i]
-
-	assert(len(sigma_list) == len(Q))
-	sigma_sum = 0.0
-	for q in range(len(sigma_list)):
-		mul = 1.0
-		for i in cluster:
-			mul *= Q[q][i]
-		sigma_sum += mul
-
-	return pi_sum + sigma + sigma_sum - wP
 
 def InPool(column_pool: list, columnA: list) -> bool:
 	for columnB, _ in column_pool:
@@ -347,6 +333,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 			f'{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 			'LOG::HEURISTICIII'
 		)
+
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for i in range(mlp.G.n):
@@ -471,7 +458,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 
 		## Generate Cutting Planes
 		stime = time.time()
-		Q = GenerateQSET(mlp, G.n, S, verbose=True)
+		Q = GenerateQSET(mlp, verbose=True)
 		if len(Q):
 			mlp.AddCuttingPlanesMLP(Q)
 			pip.AddCuttingPlanesSUB(Q)
@@ -502,17 +489,20 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 	return mlp
 
 def main():
-	numpy.random.seed(60)
+	for seed in range(100):
+		print('seed', seed)
+		numpy.random.seed(11)
 
-	n = 29
-	S = 7
+		S = 7
+		n = 4*S+1
 
-	G = Graph(n)
-	G.PrintGraph()
-	mlp = SolveNode(G, S, verbose=True)
-	print('ObjVal', mlp.model.ObjVal)
+		G = Graph(n)
+		G.PrintGraph()
+		mlp = SolveNode(G, S, verbose=True)
+		print('ObjVal', mlp.model.ObjVal)
 
-	PrintVarX(mlp.model.getVars(), mlp.columns)
+		PrintVarX(mlp.model.getVars(), mlp.columns)
+		break
 
 if __name__ == '__main__':
 	main()
