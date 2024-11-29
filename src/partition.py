@@ -231,7 +231,6 @@ def GenerateQSET(mlp: MLP, verbose: bool):
 				if heuristic.subset(mlp.columns[float_xlp[k]], Q):
 					sum_xp += xlp[float_xlp[k]].X
 			if sum_xp - q_minus > 1e-6:
-				print(sum_xp)
 				QSet.append(Q)
 	if verbose:
 		for Q in QSet:
@@ -342,7 +341,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 		while True:
 			## find the best v
 			bestV = -1
-			bestCost = 1e9
+			bestCost = float('inf')
 			for v in vLeft:
 				curCost = pi[v]
 				for vInP in CLIQ:
@@ -357,11 +356,14 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 				continue
 			else:
 				break
+		CLIQ = sorted(CLIQ)
 		column = [int(x in CLIQ) for x in range(mlp.G.n)]
 		price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
 		wP = mlp.G.Weight(column)
 		if price - wP > 1e-6:
-			column_pool.append( (column, price-wP) )
+			MaintainPool(column_pool, column, price-wP)
+		print(CLIQ)
+		LocalSearch(column, column_pool, mlp)
 
 	if len(column_pool) == 0:
 		return False
@@ -376,8 +378,45 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 		mlp.update_contrs(column_coeff)
 	return True
 
-def LocalSearch(CLIQ: list, vLeft: list, E: list, pi: list, curCost: int):
-	assert(0)
+def LocalSearch(column: list, column_pool: list, mlp: MLP):
+	pi, sigma, sigma_list = mlp.get_dual_vars()
+
+	## search local by removing a vertex
+	cluster = [i for i in range(mlp.G.n) if column[i] == 1]
+	for i in range(len(cluster)):
+		column_neighbor = column.copy()
+		column_neighbor[cluster[i]] = 0
+		if sum(column_neighbor) < mlp.S:
+			break
+		price = PriceColumn(column_neighbor, pi, sigma, sigma_list, mlp.cutting_planes)
+		wP = mlp.G.Weight(column_neighbor)
+		if price - wP > 1e-6:
+			MaintainPool(column_pool, column, price-wP)
+
+	## search local by adding a vertex
+	cluster = [i for i in range(mlp.G.n) if column[i] == 0]
+	for i in range(len(cluster)):
+		column_neighbor = column.copy()
+		column_neighbor[cluster[i]] = 1
+		price = PriceColumn(column_neighbor, pi, sigma, sigma_list, mlp.cutting_planes)
+		wP = mlp.G.Weight(column_neighbor)
+		if price - wP > 1e-6:
+			MaintainPool(column_pool, column, price-wP)
+
+	## search local by switching a vertex
+	for i in range(mlp.G.n - 1):
+		for j in range(i+1, mlp.G.n):
+			if column[i] + column[j] != 1:
+				continue
+			column_neighbor = column.copy()
+			column_neighbor[i], column_neighbor[j] = column_neighbor[j], column_neighbor[i]
+			price = PriceColumn(column_neighbor, pi, sigma, sigma_list, mlp.cutting_planes)
+			wP = mlp.G.Weight(column_neighbor)
+			if price - wP > 1e-6:
+				MaintainPool(column_pool, column, price-wP)
+
+	## end
+	pass
 
 def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
 	if verbose:
@@ -430,7 +469,8 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 		else:
-			print('Best Objective Value: ', mlp.model.ObjVal)
+			# print('Best Objective Value: ', mlp.model.ObjVal)
+			pass
 
 		## Generate Columns using HeuristicI
 		stime = time.time()
@@ -450,7 +490,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 
 		## Generate Columns using HeuristicIII
 		stime = time.time()
-		flag = HeuristicIII(mlp, verbose)
+		flag = HeuristicIII(mlp, verbose=True)
 		etime = time.time()
 		runtime_H3 += etime - stime
 		if flag == True:
@@ -458,7 +498,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 
 		## Generate Cutting Planes
 		stime = time.time()
-		Q = GenerateQSET(mlp, verbose=True)
+		Q = GenerateQSET(mlp, verbose)
 		if len(Q):
 			mlp.AddCuttingPlanesMLP(Q)
 			pip.AddCuttingPlanesSUB(Q)
@@ -498,8 +538,8 @@ def main():
 
 		G = Graph(n)
 		G.PrintGraph()
-		mlp = SolveNode(G, S, verbose=True)
-		print('ObjVal', mlp.model.ObjVal)
+		mlp = SolveNode(G, S, verbose=False)
+		print('ObjVal', mlp.model.ObjVal, '\n')
 
 		PrintVarX(mlp.model.getVars(), mlp.columns)
 		break
