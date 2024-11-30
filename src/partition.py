@@ -362,20 +362,19 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 		wP = mlp.G.Weight(column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, column, price-wP)
-		print(CLIQ)
+		# print(CLIQ)
 		LocalSearch(column, column_pool, mlp)
 
 	if len(column_pool) == 0:
 		return False
 
-	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
-	for column_coeff, price in column_pool:
+	for column, price in column_pool:
 		if verbose:
 			print(
 				f'{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-				'LOG::HEURISTICIII: Generated Column', column_coeff
+				'LOG::HEURISTICIII: Generated Column', column, price
 			)
-		mlp.update_contrs(column_coeff)
+		mlp.update_contrs(column)
 	return True
 
 def LocalSearch(column: list, column_pool: list, mlp: MLP):
@@ -391,7 +390,7 @@ def LocalSearch(column: list, column_pool: list, mlp: MLP):
 		price = PriceColumn(column_neighbor, pi, sigma, sigma_list, mlp.cutting_planes)
 		wP = mlp.G.Weight(column_neighbor)
 		if price - wP > 1e-6:
-			MaintainPool(column_pool, column, price-wP)
+			MaintainPool(column_pool, column_neighbor, price-wP)
 
 	## search local by adding a vertex
 	cluster = [i for i in range(mlp.G.n) if column[i] == 0]
@@ -401,7 +400,7 @@ def LocalSearch(column: list, column_pool: list, mlp: MLP):
 		price = PriceColumn(column_neighbor, pi, sigma, sigma_list, mlp.cutting_planes)
 		wP = mlp.G.Weight(column_neighbor)
 		if price - wP > 1e-6:
-			MaintainPool(column_pool, column, price-wP)
+			MaintainPool(column_pool, column_neighbor, price-wP)
 
 	## search local by switching a vertex
 	for i in range(mlp.G.n - 1):
@@ -413,7 +412,7 @@ def LocalSearch(column: list, column_pool: list, mlp: MLP):
 			price = PriceColumn(column_neighbor, pi, sigma, sigma_list, mlp.cutting_planes)
 			wP = mlp.G.Weight(column_neighbor)
 			if price - wP > 1e-6:
-				MaintainPool(column_pool, column, price-wP)
+				MaintainPool(column_pool, column_neighbor, price-wP)
 
 	## end
 	pass
@@ -469,7 +468,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 		else:
-			# print('Best Objective Value: ', mlp.model.ObjVal)
+			print('Best Objective Value: ', mlp.model.ObjVal)
 			pass
 
 		## Generate Columns using HeuristicI
@@ -538,7 +537,7 @@ def main():
 
 		G = Graph(n)
 		G.PrintGraph()
-		mlp = SolveNode(G, S, verbose=False)
+		mlp = SolveNode(G, S, verbose=True)
 		print('ObjVal', mlp.model.ObjVal, '\n')
 
 		PrintVarX(mlp.model.getVars(), mlp.columns)
