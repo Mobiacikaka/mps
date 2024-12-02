@@ -41,3 +41,12 @@ class PriceIP:
 
 	def write(self):
 		self.model.write('sub_model.lp')
+
+	def AddCuttingPlanesSUB(self, Q: list):
+		for Qi in Q:
+			assert(len(Qi) == self.G.n)
+			self.model.addConstr(
+				gurobipy.quicksum(
+					(1-Qi[i]) * self.y[i] for i in range(self.G.n)
+				) >= 1
+			)
