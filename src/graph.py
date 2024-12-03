@@ -1,26 +1,9 @@
 import numpy
-import itertools
-
-def convert_string_to_list(string: str):
-	s = []
-	for i in string:
-		s.append(int(i))
-	return s
-
-def convert_list_to_string(lst: list):
-	s = ''
-	for i in lst:
-		s += str(i)
-	return s
 
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
 		self.V, self.a, self.E = self.__createGraph__(self.n)
-		self.closest_vertex = [
-			sorted(self.V, key=lambda x: self.E[i][x])
-			for i in range(self.n)
-		]
 
 	## Random create edges
 	def __createGraph__(self, n: int):
@@ -75,7 +58,6 @@ class Graph:
 
 	def Collapse(self, i: int, j: int):
 		## pop V[j]
-		self.V.pop(j)
 		## add the weight of two vertex
 		self.a[i] += self.a[j]
 		self.a.pop(j)
@@ -87,3 +69,4 @@ class Graph:
 			self.E[k].pop(j)
 		self.E.pop(j)
 		self.n -= 1
+		self.V = list(range(self.n))
