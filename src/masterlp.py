@@ -1,32 +1,44 @@
-import gurobipy, math, itertools
+import gurobipy, math, itertools, copy
 from gurobipy import GRB
 from graph import Graph
 import heuristic
 
 class MLP:
-	def __init__(self, G: Graph, S: int) -> None:
+	def __init__(self, G: Graph, S: int, columns: list=[], cutting_planes: list=[]) -> None:
 		self.G = G
 		self.S = S
-		self.n_col = 0 ## 列数量
-		self.cutting_planes = []
+		self.columns = copy.deepcopy(columns)
+		self.n_col = len(self.columns)
+		self.cutting_planes = copy.deepcopy(cutting_planes)
+		self.n_cup = len(self.cutting_planes)
 
 	def __set_vars(self) -> None:
+		self.columns.append([1 for _ in range(self.G.n)])
 		self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}'))
 		self.n_col += 1
-		self.columns = [[1] * self.G.n]
 
+		closest_vertex = [
+			sorted(self.G.V, key=lambda x: self.G.E[i][x])
+			for i in range(self.G.n)
+		]
+
+		## include the clusters composed of the closest S and S+1 vertices to each vertex in the initial formulation
 		for i in range(self.G.n):
-			## include the clusters composed of the closest S and S+1 vertices to each vertex in the initial formulation
-			cluster = self.G.closest_vertex[i][:self.S]
+			cluster = closest_vertex[i][:self.S]
 			column = [int(j in cluster) for j in range(self.G.n)]
+			if column in self.columns:
+				continue
 			self.x.append(
 				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
 			)
 			self.n_col += 1
 			self.columns.append(column)
 
-			cluster = self.G.closest_vertex[i][:self.S+1]
+		for i in range(self.G.n):
+			cluster = closest_vertex[i][:self.S+1]
 			column = [int(j in cluster) for j in range(self.G.n)]
+			if column in self.columns:
+				continue
 			self.x.append(
 				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
 			)
@@ -45,10 +57,14 @@ class MLP:
 
 	def __generate_candidate_columns(self):
 		self.candidate_columns = []
+		closest_vertex = [
+			sorted(self.G.V, key=lambda x: self.G.E[i][x])
+			for i in range(self.G.n)
+		]
 		for i in range(self.G.n):
-			closest_vertex = self.G.closest_vertex[i][:2*self.S]
+			indexes = closest_vertex[i][:2*self.S]
 			for size in range(self.S, self.S * 2):
-				for cluster in itertools.combinations(closest_vertex, size):
+				for cluster in itertools.combinations(indexes, size):
 					column = [int(i in cluster) for i in range(self.G.n)]
 					weight = self.G.Weight(column)
 					self.candidate_columns.append( (column, weight) )
@@ -59,7 +75,8 @@ class MLP:
 		self.x = []
 		self.model = gurobipy.Model('Master')
 		self.__generate_candidate_columns()
-		self.__set_vars()
+		if self.n_col == 0:
+			self.__set_vars()
 		self.__set_contrs()
 
 	def solve(self, flag = 0):
@@ -78,7 +95,7 @@ class MLP:
 
 	def update_contrs(self, column_coeff: list):
 		## same column assertion
-		assert(sum(column_coeff) >= self.S)
+		# assert(sum([column_coeff[i] * self.G.a[i] for i in range(self.G.n)]) >= self.S)
 		assert(column_coeff not in self.columns), "Generated a same column"
 		self.columns.append(column_coeff)
 
