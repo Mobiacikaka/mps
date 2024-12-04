@@ -13,9 +13,14 @@ class MLP:
 		self.n_cup = len(self.cutting_planes)
 
 	def __set_vars(self) -> None:
-		self.columns.append([1 for _ in range(self.G.n)])
-		self.x.append(self.model.addVar(obj=self.G.Weight(), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}'))
-		self.n_col += 1
+		clusters = heuristic.SolveGraphByHeuristic(self.G, self.S)
+		for cluster in clusters:
+			column = [int(i in cluster) for i in range(self.G.n)]
+			self.columns.append(column)
+			self.x.append(
+				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+			)
+			self.n_col += 1
 
 		closest_vertex = [
 			sorted(self.G.V, key=lambda x: self.G.E[i][x])
