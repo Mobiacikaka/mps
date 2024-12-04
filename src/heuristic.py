@@ -10,7 +10,7 @@ class CompareClass(tuple):
 	def __lt__(self, other):
 		return self[1] < other[1]
 
-def PrintVarX(xlp: list[gurobipy.Var], columns):
+def PrintVarX(xlp: List[gurobipy.Var], columns):
 	for i in range(len(xlp)):
 		var = xlp[i]
 		if var.X != 0.0:
@@ -316,6 +316,41 @@ def solve(n: int, S: int):
 		print('WARNING::There is only fractional solution!')
 		exit()
 
+def SolveGraphByHeuristic(G: Graph, S: int) -> list:
+	U = G.V.copy()
+	clusters = []
+	while len(U) >= 2*S:
+		x_s, x_t = 0, 0
+		for i in range(G.n-1):
+			for j in range(i+1, G.n):
+				if G.E[i][j] > G.E[x_s][x_t]:
+					x_s, x_t = i, j
+		closest_x_s = sorted(U, key=lambda x: G.E[x_s][x])[:S]
+		clusters.append(closest_x_s)
+		for v in closest_x_s:
+			U.remove(v)
+		closest_x_t = sorted(U, key=lambda x: G.E[x_t][x])[:S]
+		clusters.append(closest_x_t)
+		for v in closest_x_t:
+			U.remove(v)
+	if len(U) >= S:
+		clusters.append(U)
+	if len(U) < S:
+		for v in U:
+			closest_neighbor = -1
+			closest_distance = float('inf')
+			for u in G.V:
+				if u == v:
+					continue
+				if G.E[u][v] < closest_distance:
+					closest_neighbor = u
+					closest_distance = G.E[u][v]
+			for cluster in clusters:
+				if closest_neighbor in cluster:
+					cluster.append(v)
+					break
+	return clusters
+
 def SolveNode(G: Graph, S: int, verbose: bool=False):
 	mlp = MLP(G, S) ## Master Linear Problem
 	mlp.create_model()
@@ -361,7 +396,7 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 
 		## Generate Columns using HeuristicIII
 		stime = time.time()
-		flag = HeuristicIII(mlp, verbose=True)
+		flag = HeuristicIII(mlp, verbose)
 		etime = time.time()
 		runtime_H3 += etime - stime
 		if flag == True:
