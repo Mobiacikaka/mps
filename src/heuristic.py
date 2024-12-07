@@ -234,8 +234,12 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 	column_pool = []
 	for i in range(mlp.G.n):
 		CLIQ = [i]
-		vLeft = [j for j in range(mlp.G.n) if j != i]
+		CLIQ_size = mlp.G.a[i]
+		vLeft = [j for j in range(mlp.G.n)]
+		vLeft.remove(i)
 		while True:
+			if CLIQ_size >= 2 * mlp.S - 1:
+				break
 			## find the best v
 			bestV = -1
 			bestCost = float('inf')
@@ -247,9 +251,19 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 					bestCost = curCost
 					bestV = v
 			## judge to continue or break
-			if len(CLIQ) < mlp.S or bestCost > 0:
+			if CLIQ_size < mlp.S or bestCost > 0:
 				CLIQ.append(bestV)
-				vLeft.remove(bestV)
+				CLIQ_size += mlp.G.a[bestV]
+				try:
+					vLeft.remove(bestV)
+				except:
+					mlp.G.PrintGraph('error_Graph.txt')
+					for column in mlp.columns:
+						print(column)
+					print(pi)
+					print(CLIQ)
+					print(vLeft)
+					exit()
 				continue
 			else:
 				break
@@ -365,6 +379,9 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 	runtime_H3 = 0.0
 	runtime_CP = 0.0 ##.0 cutting planes time
 
+	Heuristic_flag = True
+	Cutting_Plane_flag = False
+
 	while True:
 		stime = time.time()
 		mlp.solve()
@@ -378,40 +395,42 @@ def SolveNode(G: Graph, S: int, verbose: bool=False):
 			print('Best Objective Value: ', mlp.model.ObjVal)
 			pass
 
-		## Generate Columns using HeuristicI
-		stime = time.time()
-		flag = HeuristicI(mlp, verbose)
-		etime = time.time()
-		runtime_H1 += etime - stime
-		if flag == True:
-			continue
+		if Heuristic_flag:
+			## Generate Columns using HeuristicI
+			# stime = time.time()
+			# flag = HeuristicI(mlp, verbose)
+			# etime = time.time()
+			# runtime_H1 += etime - stime
+			# if flag == True:
+			# 	continue
 
-		## Generate Columns using HeuristicII
-		stime = time.time()
-		flag = HeuristicII(mlp, verbose)
-		etime = time.time()
-		runtime_H2 += etime - stime
-		if flag == True:
-			continue
+			## Generate Columns using HeuristicII
+			stime = time.time()
+			flag = HeuristicII(mlp, verbose)
+			etime = time.time()
+			runtime_H2 += etime - stime
+			if flag == True:
+				continue
 
-		## Generate Columns using HeuristicIII
-		stime = time.time()
-		flag = HeuristicIII(mlp, verbose)
-		etime = time.time()
-		runtime_H3 += etime - stime
-		if flag == True:
-			continue
+			## Generate Columns using HeuristicIII
+			stime = time.time()
+			flag = HeuristicIII(mlp, verbose)
+			etime = time.time()
+			runtime_H3 += etime - stime
+			if flag == True:
+				continue
 
-		## Generate Cutting Planes
-		stime = time.time()
-		Q = GenerateQSET(mlp, verbose)
-		if len(Q):
-			mlp.AddCuttingPlanesMLP(Q)
-			pip.AddCuttingPlanesSUB(Q)
-		etime = time.time()
-		runtime_CP += etime - stime
-		if len(Q):
-			continue
+		if Cutting_Plane_flag and Heuristic_flag:
+			## Generate Cutting Planes
+			stime = time.time()
+			Q = GenerateQSET(mlp, verbose)
+			if len(Q):
+				mlp.AddCuttingPlanesMLP(Q)
+				pip.AddCuttingPlanesSUB(Q)
+			etime = time.time()
+			runtime_CP += etime - stime
+			if len(Q):
+				continue
 
 		## Column Generation using IPSolver
 		stime = time.time()
