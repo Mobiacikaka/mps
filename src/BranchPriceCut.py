@@ -1,4 +1,4 @@
-import numpy
+import numpy, time
 from gurobipy import GRB
 
 from graph import Graph
@@ -23,7 +23,7 @@ def BranchAndPrice(n: int, S: int):
 	node_count = 0
 
 	while candidate_node:
-		node = candidate_node.pop()
+		node = candidate_node.pop(0)
 
 		if node.lower_bound >= upper_bound:
 			print('LOG::PRUNE BY BOUND')
@@ -76,9 +76,12 @@ def BranchAndPrice(n: int, S: int):
 			i += 1
 
 if __name__ == '__main__':
+	time_start = time.time()
 	# numpy.random.seed(60)
 	# BranchAndPrice(50, 7)
-	numpy.random.seed(60)
-	BranchAndPrice(29, 7)
-	# numpy.random.seed(5)
-	# BranchAndPrice(15, 4)
+	# numpy.random.seed(11)
+	# BranchAndPrice(29, 7)
+	numpy.random.seed(5)
+	BranchAndPrice(15, 4)
+	time_end = time.time()
+	print('Total Time: ', time_end - time_start)
