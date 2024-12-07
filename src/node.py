@@ -17,8 +17,7 @@ class Node:
 		self.collapse_comb = []
 
 	def optimize(self):
-		self.mlp = heuristic.SolveNode(self.G, self.S)
-		self.mlp.solve()
+		self.mlp = heuristic.SolveNode(self.G, self.S, verbose=False)
 		self.obj_values = self.mlp.model.ObjVal
 		self.solution = self.mlp.model.getVars()
 		return self.mlp.model.Status
@@ -26,11 +25,11 @@ class Node:
 	def update_lower_bound(self):
 		if self.lower_bound < self.obj_values:
 			self.lower_bound = self.obj_values
-			# assert(self.lower_bound <= self.upper_bound)
+			assert(self.lower_bound <= self.upper_bound)
 
 	def update_upper_bound(self):
 		self.upper_bound = self.obj_values
-		# assert(self.lower_bound <= self.upper_bound)
+		assert(self.lower_bound <= self.upper_bound)
 
 	def is_integer(self):
 		assert(self.mlp != None)
