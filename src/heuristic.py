@@ -343,12 +343,12 @@ def SolveNode(
 
 		if USE_HEURISTIC_FLAG:
 			## Generate Columns using HeuristicI
-			# stime = time.time()
-			# flag = HeuristicI(mlp, verbose)
-			# etime = time.time()
-			# runtime_H1 += etime - stime
-			# if flag == True:
-			# 	continue
+			stime = time.time()
+			flag = HeuristicI(mlp, verbose)
+			etime = time.time()
+			runtime_H1 += etime - stime
+			if flag == True:
+				continue
 
 			## Generate Columns using HeuristicII
 			stime = time.time()

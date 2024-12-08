@@ -4,13 +4,14 @@ from graph import Graph
 import heuristic
 
 class MLP:
-	def __init__(self,
-			G: Graph,
-			S: int,
-			columns: list=[],
-			cutting_planes: list=[],
-			candidate_columns: list=[],
-		) -> None:
+	def __init__(
+		self,
+		G: Graph,
+		S: int,
+		columns: list=[],
+		cutting_planes: list=[],
+		candidate_columns: list=[],
+	) -> None:
 		self.G = G
 		self.S = S
 
@@ -36,11 +37,26 @@ class MLP:
 		self.n_col += 1
 
 	def __set_vars2(self) -> None:
-		if len(self.columns) > 0:
-			return
+		for column in self.columns:
+			self.x.append(
+				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+			)
+			self.n_col += 1
+
+		if True:
+			column = [1 for _ in range(self.G.n)]
+			if column not in self.columns:
+				self.columns.append(column)
+				self.x.append(
+					self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
+				)
+				self.n_col += 1
+
 		clusters = heuristic.SolveGraphByHeuristic(self.G, self.S)
 		for cluster in clusters:
 			column = [int(i in cluster) for i in range(self.G.n)]
+			if column in self.columns:
+				continue
 			self.columns.append(column)
 			self.x.append(
 				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
@@ -78,12 +94,32 @@ class MLP:
 		pass
 
 	def __set_contrs(self) -> None:
-		self.constrs = self.model.addConstrs(
-			gurobipy.quicksum( self.x[i] * self.columns[i][j] for i in range(self.n_col) ) == 1 for j in range(self.G.n)
+		## n vertexes
+		self.model.addConstrs(
+			gurobipy.quicksum(
+				self.x[i] * self.columns[i][j] for i in range(self.n_col)
+			) == 1 for j in range(self.G.n)
 		)
-		self.constrs2 = self.model.addConstr(
-			gurobipy.quicksum( self.x[i] for i in range(len(self.x)) ) <= math.floor(self.G.n / self.S)
+
+		## sum(x_P) <= k
+		self.model.addConstr(
+			gurobipy.quicksum(
+				self.x[i] for i in range(len(self.x))
+			) <= math.floor(self.G.n / self.S)
 		)
+
+		## cutting planes
+		for Qi in self.cutting_planes:
+			k = 0
+			for i in range(self.G.n):
+				k += Qi[i] * self.G.a[i]
+			k = k // self.S + 1
+			self.model.addConstr(
+				gurobipy.quicksum(
+					self.x[i] * int(heuristic.subset(self.columns[i], Qi))
+					for i in range(self.n_col)
+				) <= k - 1
+			)
 
 	def __generate_candidate_columns(self):
 		## TODO: consider G.a
@@ -105,7 +141,7 @@ class MLP:
 		self.x = []
 		self.model = gurobipy.Model('Master')
 		self.__generate_candidate_columns()
-		self.__set_vars()
+		self.__set_vars2()
 		self.__set_contrs()
 
 	def solve(self, flag = 0):

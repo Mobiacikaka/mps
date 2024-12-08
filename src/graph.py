@@ -6,6 +6,7 @@ class Graph:
 		self.V = []
 		self.a = []
 		self.E = []
+		self.CreateGraph()
 
 	## Random create edges
 	def CreateGraph(self):
@@ -46,6 +47,8 @@ class Graph:
 				vi = subgraph[i]
 				vj = subgraph[j]
 				s += self.E[vi][vj]
+		for v in subgraph:
+			s += self.InnerEdge[v]
 		return s
 
 	def PrintGraph(self, filename: str='Graph.txt'):

@@ -1,6 +1,8 @@
 import numpy
 from graph import Graph
 from heuristic import SolveNode, PrintVarX
+from masterlp import MLP
+from priceip import PriceIP as SUB
 
 def main():
 	for seed in range(100):
@@ -12,7 +14,13 @@ def main():
 
 		G = Graph(n)
 		G.PrintGraph()
-		mlp = SolveNode(G, S, verbose=True)
+
+		mlp = MLP(G, S)
+		mlp.create_model()
+		pip = SUB(G, S)
+		pip.create_model()
+
+		mlp = SolveNode(mlp, pip, verbose=True)
 		print('ObjVal', mlp.model.ObjVal, '\n')
 
 		PrintVarX(mlp.model.getVars(), mlp.columns)
