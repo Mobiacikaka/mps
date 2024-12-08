@@ -24,6 +24,7 @@ def BranchAndPrice(n: int, S: int):
 
 	while candidate_node:
 		node = candidate_node.pop(0)
+		node.create_model()
 
 		if node.lower_bound >= upper_bound:
 			print('LOG::PRUNE BY BOUND')

@@ -21,9 +21,31 @@ class Node:
 		self.vi = -1
 		self.vj = -1
 		self.collapse_comb = []
+		self.columns = []
+		self.cutting_planes = []
+		self.candidate_columns = []
+
+	def create_model(self):
+		self.mlp = MLP(
+			self.G,
+			self.S,
+			columns=self.columns,
+			cutting_planes=self.cutting_planes,
+			candidate_columns=self.candidate_columns,
+		)
+		self.mlp.create_model()
+		self.pip = SUB(self.G, self.S)
+		self.pip.create_model()
 
 	def optimize(self):
-		self.mlp = heuristic.SolveNode(self.G, self.S, verbose=False)
+		self.mlp = heuristic.SolveNode(
+			mlp=self.mlp,
+			pip=self.pip,
+			TIME_ESTIMATION_FLAG=True,
+			USE_HEURISTIC_FLAG=True,
+			USE_CUTTING_PLANES=True,
+			verbose=False,
+		)
 		self.obj_values = self.mlp.model.ObjVal
 		self.solution = self.mlp.model.getVars()
 		return self.mlp.model.Status
@@ -69,10 +91,23 @@ class Node:
 		return False
 
 	def get_child_problem(self):
-		G_Div, G_Cop = copy.deepcopy(self.G), copy.deepcopy(self.G)
+		G_Div = copy.deepcopy(self.G)
 		G_Div.Divide(self.vi, self.vj)
-		G_Cop.Collapse(self.vi, self.vj)
 		Node_Div = Node(G_Div, self.S, self.upper_bound, self.lower_bound)
+		for column in self.mlp.columns:
+			if column[self.vi] == 1 and column[self.vj] == 1:
+				continue
+			Node_Div.columns.append(column)
+		for cutting_plane in self.mlp.cutting_planes:
+			Node_Div.cutting_planes.append(cutting_plane)
+		for candidate_column, price in self.mlp.candidate_columns:
+			if candidate_column[self.vi] == 1 and candidate_column[self.vj] == 1:
+				continue
+			price = G_Div.Weight(candidate_column)
+			Node_Div.candidate_columns.append( (candidate_column, price) )
+
+		G_Cop = copy.deepcopy(self.G)
+		G_Cop.Collapse(self.vi, self.vj)
 		Node_Cop = Node(G_Cop, self.S, self.upper_bound, self.lower_bound)
 		Node_Cop.collapse_comb = self.collapse_comb.copy() + [(self.vi, self.vj)]
 		return Node_Div, Node_Cop

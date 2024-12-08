@@ -314,23 +314,13 @@ def SolveGraphByHeuristic(G: Graph, S: int) -> list:
 	return clusters
 
 def SolveNode(
-	G: Graph,
-	S: int,
-	columns: list=[],
-	cutting_planes: list=[],
-	candidate_columns: list=[],
+	mlp: MLP,
+	pip: SUB,
 	TIME_ESTIMATION_FLAG: bool=True,
-	Heuristic_flag: bool=True,
-	Cutting_Plane_flag: bool=True,
+	USE_HEURISTIC_FLAG: bool=True,
+	USE_CUTTING_PLANES: bool=True,
 	verbose: bool=False,
 ) -> MLP:
-	G.PrintGraph()
-
-	mlp = MLP(G, S, columns, cutting_planes, candidate_columns) ## Master Linear Problem
-	mlp.create_model()
-	pip = SUB(G, S) ## Price Integer Problem
-	pip.create_model()
-
 	runtime_MLP = 0.0
 	runtime_SUB = 0.0
 	runtime_H1 = 0.0
@@ -351,7 +341,7 @@ def SolveNode(
 			print('Best Objective Value: ', mlp.model.ObjVal)
 			pass
 
-		if Heuristic_flag:
+		if USE_HEURISTIC_FLAG:
 			## Generate Columns using HeuristicI
 			# stime = time.time()
 			# flag = HeuristicI(mlp, verbose)
@@ -376,7 +366,7 @@ def SolveNode(
 			if flag == True:
 				continue
 
-		if Cutting_Plane_flag and Heuristic_flag:
+		if USE_CUTTING_PLANES and USE_HEURISTIC_FLAG:
 			## Generate Cutting Planes
 			stime = time.time()
 			Q = GenerateQSET(mlp, verbose)

@@ -3,20 +3,23 @@ import numpy
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
-		self.V, self.a, self.E = self.__createGraph__(self.n)
+		self.V = []
+		self.a = []
+		self.E = []
 
 	## Random create edges
-	def __createGraph__(self, n: int):
+	def CreateGraph(self):
 		## vertex
-		V = [i for i in range(n)]
+		self.V = [i for i in range(self.n)]
 		## vertex weight
-		a = [1] * n
+		self.a = [1] * self.n
 		## edges
-		E = [ [ 0.0 for _ in range(n) ] for _ in range(n) ]
-		for i in range(n-1):
-			for j in range(i+1, n):
-				E[i][j] = E[j][i] = float(numpy.random.randint(100) + 1)
-		return V, a, E
+		self.E = [ [ 0.0 for _ in range(self.n) ] for _ in range(self.n) ]
+		for i in range(self.n-1):
+			for j in range(i+1, self.n):
+				self.E[i][j] = self.E[j][i] = float(numpy.random.randint(100) + 1)
+		self.InnerEdge = [0.0 for _ in range(self.n)]
+		return
 
 	def SortEdge(self) -> None:
 		EdgeName = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
@@ -57,18 +60,25 @@ class Graph:
 		self.E[i][j] = self.E[j][i] = 2**20
 
 	def Collapse(self, i: int, j: int):
-		## pop V[j]
+		assert(i < j)
+
 		## add the weight of two vertex
 		self.a[i] += self.a[j]
 		self.a.pop(j)
+
+		## set Vij's inner edge value to insure correctness of cluster's weight
+		self.InnerEdge[i] += self.InnerEdge[j] + self.E[i][j]
+		self.InnerEdge.pop(j)
+
 		## remove edges
 		for k in range(self.n):
-			if k == i:
+			if k == i or k == j:
 				continue
-			self.E[i][k] = self.E[i][k] + self.E[i][j] + self.E[j][k]
-			self.E[k][i] = self.E[i][k]
+			self.E[k][i] = self.E[i][k] = self.E[i][k] + self.E[j][k]
 		for k in range(self.n):
 			self.E[k].pop(j)
 		self.E.pop(j)
+
+		## remove vertex
 		self.n -= 1
 		self.V = list(range(self.n))
