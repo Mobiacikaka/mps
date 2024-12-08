@@ -17,8 +17,8 @@ def PrintVarX(xlp: List[gurobipy.Var], columns):
 			print(f'{var.VarName}\t= {var.X}\t{columns[i]}', end='\n')
 	print()
 
-## A subset of B
 def subset(A: list, B: list) -> bool:
+	## A subset of B
 	assert(len(A) == len(B))
 	for i in range(len(A)):
 		if A[i] == 1 and B[i] == 0:
@@ -254,17 +254,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 			if CLIQ_size < mlp.S or bestCost > 0:
 				CLIQ.append(bestV)
 				CLIQ_size += mlp.G.a[bestV]
-				try:
-					vLeft.remove(bestV)
-				except:
-					mlp.G.PrintGraph('error_Graph.txt')
-					for column in mlp.columns:
-						print(column)
-					print(pi)
-					print(CLIQ)
-					print(vLeft)
-					exit()
-				continue
+				vLeft.remove(bestV)
 			else:
 				break
 		CLIQ = sorted(CLIQ)
@@ -287,48 +277,6 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 			)
 		mlp.update_contrs(column)
 	return True
-
-def solve(n: int, S: int):
-	G = Graph(n)
-	G.PrintGraph()
-
-	cppmin = MLP(G, S)
-	cppmin.create_model()
-	sub_prob = SUB(G, S)
-	sub_prob.create_model()
-
-	while True:
-		## 2: Approximately solve the current LP relaxation using CPLEX
-		cppmin.solve()
-		cppmin.write('mlp.lp')
-		if cppmin.model.Status == GRB.INFEASIBLE:
-			print('INFEASIBLE')
-			exit()
-
-		## Generate Q set
-		# QSet = heuristic.GenerateQSET(cppmin, n, S)
-
-		## 3: Generate columns using heuristic algorithms, if new columns are found goto 2.
-		# if heuristic.HeuristicI(G, S, cppmin)   == True:
-		# 	continue
-
-		## 5: Generate columns using an IP solver, if new columns are found goto 2.
-		if IPSolver(cppmin, sub_prob, True) == True: ## There is new column generated
-			continue
-
-		## 6: If the gap between the value of the LP relaxation
-		##    and the value of the incumbent integer solution is sufficiently small,
-		##    STOP with optimality
-		break
-
-	print()
-	for x in cppmin.model.getVars():
-		if x.X != 0.0:
-			print(f'{x.VarName}={x.X}\t: {cppmin.model.getCol(x)}')
-
-	if not cppmin.is_integer():
-		print('WARNING::There is only fractional solution!')
-		exit()
 
 def SolveGraphByHeuristic(G: Graph, S: int) -> list:
 	U = G.V.copy()
@@ -365,22 +313,30 @@ def SolveGraphByHeuristic(G: Graph, S: int) -> list:
 					break
 	return clusters
 
-def SolveNode(G: Graph, S: int, verbose: bool=False):
-	mlp = MLP(G, S) ## Master Linear Problem
+def SolveNode(
+	G: Graph,
+	S: int,
+	columns: list=[],
+	cutting_planes: list=[],
+	candidate_columns: list=[],
+	TIME_ESTIMATION_FLAG: bool=True,
+	Heuristic_flag: bool=True,
+	Cutting_Plane_flag: bool=True,
+	verbose: bool=False,
+) -> MLP:
+	G.PrintGraph()
+
+	mlp = MLP(G, S, columns, cutting_planes, candidate_columns) ## Master Linear Problem
 	mlp.create_model()
 	pip = SUB(G, S) ## Price Integer Problem
 	pip.create_model()
 
-	TIME_ESTIMATION_FLAG = True
 	runtime_MLP = 0.0
 	runtime_SUB = 0.0
 	runtime_H1 = 0.0
 	runtime_H2 = 0.0
 	runtime_H3 = 0.0
 	runtime_CP = 0.0 ##.0 cutting planes time
-
-	Heuristic_flag = True
-	Cutting_Plane_flag = False
 
 	while True:
 		stime = time.time()

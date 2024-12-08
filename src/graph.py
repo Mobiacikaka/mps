@@ -63,6 +63,8 @@ class Graph:
 		self.a.pop(j)
 		## remove edges
 		for k in range(self.n):
+			if k == i:
+				continue
 			self.E[i][k] = self.E[i][k] + self.E[i][j] + self.E[j][k]
 			self.E[k][i] = self.E[i][k]
 		for k in range(self.n):

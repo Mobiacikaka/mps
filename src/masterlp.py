@@ -4,15 +4,30 @@ from graph import Graph
 import heuristic
 
 class MLP:
-	def __init__(self, G: Graph, S: int, columns: list=[], cutting_planes: list=[]) -> None:
+	def __init__(self,
+			G: Graph,
+			S: int,
+			columns: list=[],
+			cutting_planes: list=[],
+			candidate_columns: list=[],
+		) -> None:
 		self.G = G
 		self.S = S
+
+		## columns
 		self.columns = copy.deepcopy(columns)
 		self.n_col = len(self.columns)
+
+		## cutting planes
 		self.cutting_planes = copy.deepcopy(cutting_planes)
 		self.n_cup = len(self.cutting_planes)
 
+		## candidate columns
+		self.candidate_columns = candidate_columns
+
 	def __set_vars(self) -> None:
+		if len(self.columns) > 0:
+			return
 		column = [1 for _ in range(self.G.n)]
 		self.columns.append(column)
 		self.x.append(
@@ -21,6 +36,8 @@ class MLP:
 		self.n_col += 1
 
 	def __set_vars2(self) -> None:
+		if len(self.columns) > 0:
+			return
 		clusters = heuristic.SolveGraphByHeuristic(self.G, self.S)
 		for cluster in clusters:
 			column = [int(i in cluster) for i in range(self.G.n)]
@@ -70,7 +87,6 @@ class MLP:
 
 	def __generate_candidate_columns(self):
 		## TODO: consider G.a
-		self.candidate_columns = []
 		closest_vertex = [
 			sorted(self.G.V, key=lambda x: self.G.E[i][x])
 			for i in range(self.G.n)
@@ -89,8 +105,7 @@ class MLP:
 		self.x = []
 		self.model = gurobipy.Model('Master')
 		self.__generate_candidate_columns()
-		if self.n_col == 0:
-			self.__set_vars()
+		self.__set_vars()
 		self.__set_contrs()
 
 	def solve(self, flag = 0):

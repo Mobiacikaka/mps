@@ -77,11 +77,13 @@ def BranchAndPrice(n: int, S: int):
 
 if __name__ == '__main__':
 	time_start = time.time()
+
 	# numpy.random.seed(60)
 	# BranchAndPrice(50, 7)
 	# numpy.random.seed(11)
 	# BranchAndPrice(29, 7)
 	numpy.random.seed(5)
 	BranchAndPrice(15, 4)
+
 	time_end = time.time()
 	print('Total Time: ', time_end - time_start)

@@ -7,7 +7,13 @@ from masterlp import MLP
 from priceip import PriceIP as SUB
 
 class Node:
-	def __init__(self, G: Graph, S: int, upper_bound: float, lower_bound: float) -> None:
+	def __init__(
+		self,
+		G: Graph,
+		S: int,
+		upper_bound: float,
+		lower_bound: float,
+	) -> None:
 		self.G = G
 		self.S = S
 		self.upper_bound = upper_bound
