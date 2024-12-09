@@ -24,6 +24,7 @@ class Node:
 		self.columns = []
 		self.cutting_planes = []
 		self.candidate_columns = []
+		self.ROOT_FLAG: bool = False
 
 	def create_model(self):
 		self.mlp = MLP(
@@ -42,9 +43,10 @@ class Node:
 			mlp=self.mlp,
 			pip=self.pip,
 			TIME_ESTIMATION_FLAG=True,
-			USE_HEURISTIC_FLAG=True,
-			USE_CUTTING_PLANES=True,
-			verbose=False,
+			USE_HEURISTIC_FLAG=False,
+			# USE_CUTTING_PLANES=self.ROOT_FLAG == True,
+			USE_CUTTING_PLANES=False,
+			verbose=True,
 		)
 		self.obj_values = self.mlp.model.ObjVal
 		self.solution = self.mlp.model.getVars()
@@ -103,11 +105,22 @@ class Node:
 		for candidate_column, price in self.mlp.candidate_columns:
 			if candidate_column[self.vi] == 1 and candidate_column[self.vj] == 1:
 				continue
-			price = G_Div.Weight(candidate_column)
 			Node_Div.candidate_columns.append( (candidate_column, price) )
 
 		G_Cop = copy.deepcopy(self.G)
 		G_Cop.Collapse(self.vi, self.vj)
 		Node_Cop = Node(G_Cop, self.S, self.upper_bound, self.lower_bound)
+		for column in self.mlp.columns:
+			if column[self.vi] + column[self.vj] == 1:
+				continue
+			Node_Cop.columns.append(column)
+		for cutting_plane in self.mlp.cutting_planes:
+			if cutting_plane[self.vi] + cutting_plane[self.vj] == 1:
+				continue
+			Node_Cop.cutting_planes.append(cutting_plane)
+		for candidate_column, price in self.mlp.candidate_columns:
+			if candidate_column[self.vi] + candidate_column[self.vj] == 1:
+				continue
+			Node_Cop.candidate_columns.append( (candidate_column, price) )
 		Node_Cop.collapse_comb = self.collapse_comb.copy() + [(self.vi, self.vj)]
 		return Node_Div, Node_Cop

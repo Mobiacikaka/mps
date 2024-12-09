@@ -72,30 +72,32 @@ def GenerateQSET(mlp: MLP, verbose: bool):
 			)
 	return QSet
 
-def IPSolver(masterproblem: MLP, subproblem: SUB, verbose: bool):
+def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 	if verbose:
 		print(
 			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 			'LOG::IPSOLVER'
 		)
-	pi, sigma, sigma_list = masterproblem.get_dual_vars()
+	pi, sigma, sigma_list = mlp.get_dual_vars()
 	subproblem.set_objective(pi)
 	subproblem.solve()
 	subproblem.write()
 
-	y = subproblem.get_solution()
-	reduced_cost = subproblem.get_reduced_cost()
-	if verbose:
-		print(
-			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-			'LOG::IPSOLVER::Generated Column: ', y
-		)
-
-	if reduced_cost - sigma >= -1e-6:
+	column = subproblem.get_solution()
+	wP = mlp.G.Weight(column)
+	price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+	if price - wP < 1e-6:
 		return False
 
-	masterproblem.update_contrs(y)
+	mlp.update_contrs(column)
 	return True
+	# reduced_cost = subproblem.get_reduced_cost()
+	# if verbose:
+	# 	print(
+	# 		f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+	# 		'LOG::IPSOLVER::Generated Column: ', y, PriceColumn(y, pi, sigma, sigma_list, mlp.cutting_planes), reduced_cost-sigma
+	# 	)
+
 
 def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
 	assert(len(column) == len(pi))
@@ -150,7 +152,7 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 		if verbose:
 			print(
 				f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-				'LOG::HEURISTICI: Generated Column', column
+				'LOG::HEURISTICI: Generated Column', column, price
 			)
 			# print('LOG::HEURISTICI: price', price)
 		mlp.update_contrs(column)

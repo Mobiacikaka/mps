@@ -17,11 +17,12 @@ class MLP:
 
 		## columns
 		self.columns = copy.deepcopy(columns)
-		self.n_col = len(self.columns)
+		self.n_col = 0
 
 		## cutting planes
 		self.cutting_planes = copy.deepcopy(cutting_planes)
 		self.n_cup = len(self.cutting_planes)
+		self.candidate_columns_cp = []
 
 		## candidate columns
 		self.candidate_columns = candidate_columns
@@ -95,6 +96,8 @@ class MLP:
 
 	def __set_contrs(self) -> None:
 		## n vertexes
+		assert(len(self.x) == len(self.columns) == self.n_col), \
+		f'size(x)={len(self.x)}, size(columns)={len(self.columns)}, n_col={self.n_col}'
 		self.model.addConstrs(
 			gurobipy.quicksum(
 				self.x[i] * self.columns[i][j] for i in range(self.n_col)
@@ -122,6 +125,8 @@ class MLP:
 			)
 
 	def __generate_candidate_columns(self):
+		if len(self.candidate_columns) > 0:
+			return
 		## TODO: consider G.a
 		closest_vertex = [
 			sorted(self.G.V, key=lambda x: self.G.E[i][x])
@@ -135,7 +140,6 @@ class MLP:
 					weight = self.G.Weight(column)
 					self.candidate_columns.append( (column, weight) )
 		## cutting planes candidate columns
-		self.candidate_columns_cp = []
 
 	def create_model(self):
 		self.x = []
@@ -143,6 +147,18 @@ class MLP:
 		self.__generate_candidate_columns()
 		self.__set_vars2()
 		self.__set_contrs()
+
+		## generate cutting planes' candidate column
+		for Qi in self.cutting_planes:
+			assert(len(Qi) == self.G.n)
+			Qi_indexes = [i for i in range(self.G.n) if Qi[i]]
+			for size in range(self.S, self.S * 2):
+				for cluster in itertools.combinations(Qi_indexes, size):
+					column = [int(x in cluster) for x in range(self.G.n)]
+					weight = self.G.Weight(column)
+					self.candidate_columns_cp.append( (column, weight) )
+
+		return
 
 	def solve(self, flag = 0):
 		self.model.Params.OutputFlag = flag
@@ -161,7 +177,7 @@ class MLP:
 	def update_contrs(self, column_coeff: list):
 		## same column assertion
 		# assert(sum([column_coeff[i] * self.G.a[i] for i in range(self.G.n)]) >= self.S)
-		assert(column_coeff not in self.columns), "Generated a same column"
+		assert(column_coeff not in self.columns), f'Generated a same column {column_coeff}'
 		self.columns.append(column_coeff)
 
 		_column_coeff = column_coeff

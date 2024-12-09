@@ -15,6 +15,7 @@ def BranchAndPrice(n: int, S: int):
 		upper_bound=upper_bound,
 		lower_bound=lower_bound,
 	)
+	root_node.ROOT_FLAG = True
 	candidate_node = [root_node]
 	current_optimun = []
 	optimum_columns = []
@@ -25,6 +26,7 @@ def BranchAndPrice(n: int, S: int):
 	while candidate_node:
 		node = candidate_node.pop(0)
 		node.create_model()
+		node.G.PrintGraph()
 
 		if node.lower_bound >= upper_bound:
 			print('LOG::PRUNE BY BOUND')
