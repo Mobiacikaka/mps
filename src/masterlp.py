@@ -38,12 +38,14 @@ class MLP:
 		self.n_col += 1
 
 	def __set_vars2(self) -> None:
+		## Add the parent node's columns
 		for column in self.columns:
 			self.x.append(
 				self.model.addVar(obj=self.G.Weight(column), lb=0, vtype=GRB.CONTINUOUS, name=f'x{self.n_col}')
 			)
 			self.n_col += 1
 
+		## Add the whole vertex set
 		if True:
 			column = [1 for _ in range(self.G.n)]
 			if column not in self.columns:
@@ -53,6 +55,7 @@ class MLP:
 				)
 				self.n_col += 1
 
+		## Add the Heuristic Algorithm from [14]
 		clusters = heuristic.SolveGraphByHeuristic(self.G, self.S)
 		for cluster in clusters:
 			column = [int(i in cluster) for i in range(self.G.n)]

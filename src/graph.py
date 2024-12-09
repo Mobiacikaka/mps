@@ -55,7 +55,7 @@ class Graph:
 		f = open(filename, 'w')
 		for edges in self.E:
 			for edge in edges:
-				f.write(str(edge)+'\t')
+				f.write(str(edge)+' \t')
 			f.write('\n')
 
 	def Divide(self, i: int, j: int):

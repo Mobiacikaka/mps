@@ -1,13 +1,19 @@
+import gurobipy
 import numpy, time
 from gurobipy import GRB
 
 from graph import Graph
 from node import Node
 
+def PrintSolution(sol: list[gurobipy.Var]):
+	for var in sol:
+		if var.X == 1.0:
+			print(var.VarName)
+
 def BranchAndPrice(n: int, S: int):
 	OriginalGraph = Graph(n)
-	OriginalGraph.PrintGraph()
 
+	node_count = 0
 	upper_bound, lower_bound = float('inf'), 0
 	root_node = Node(
 		G=OriginalGraph,
@@ -17,26 +23,21 @@ def BranchAndPrice(n: int, S: int):
 	)
 	root_node.ROOT_FLAG = True
 	candidate_node = [root_node]
-	current_optimun = []
-	optimum_columns = []
-	node_collapse_seq = []
 
-	node_count = 0
+	optimum_mlp = None
+	optimum_divide_combo = []
+	optimum_collapse_combo = []
 
 	while candidate_node:
 		node = candidate_node.pop(0)
 		node.create_model()
-		node.G.PrintGraph()
+		node.G.PrintGraph(f'Graph_{node_count}.txt')
 
 		if node.lower_bound >= upper_bound:
 			print('LOG::PRUNE BY BOUND')
 			continue
 
 		model_status = node.optimize()
-		# if True:
-		# 	file = open(f'columns_{node_count}.txt', 'w')
-		# 	for column in node.mlp.columns:
-		# 		file.write(f'{column}\n')
 		node_count += 1
 		if model_status == GRB.INFEASIBLE:
 			print('LOG::PRUNE BY INFEASIBILITY')
@@ -53,12 +54,9 @@ def BranchAndPrice(n: int, S: int):
 			if node.upper_bound < upper_bound:
 				print('LOG::IS OPTIMUM')
 				upper_bound = node.upper_bound
-				current_optimun = node.solution
-				optimum_columns = []
-				for index in range(len(current_optimun)):
-					if current_optimun[index].X == 1.0:
-						optimum_columns.append(node.mlp.columns[index])
-				node_collapse_seq = node.collapse_comb.copy()
+				optimum_mlp = node.mlp
+				optimum_divide_combo = node.divide_comb
+				optimum_collapse_combo = node.collapse_comb
 			continue
 		else:
 			pass
@@ -70,23 +68,27 @@ def BranchAndPrice(n: int, S: int):
 			candidate_node.append(Node_Cop)
 
 	print('upper_bound: ', upper_bound)
-	# print('optimum: ', current_optimun)
-	i = 0
-	print('Collapsed Nodes', node_collapse_seq)
-	for var in current_optimun:
-		if var.X == 1.0:
-			print(var.VarName, optimum_columns[i])
-			i += 1
+	print('Divided Nodes', optimum_divide_combo)
+	print('Collapsed Nodes', optimum_collapse_combo)
+
+	assert(optimum_mlp != None)
+	optimum_mlp.model.optimize()
+	sol = optimum_mlp.model.getVars()
+	for i in range(optimum_mlp.n_col):
+		if sol[i].X == 1.0:
+			print(sol[i].VarName, optimum_mlp.columns[i])
 
 if __name__ == '__main__':
 	time_start = time.time()
 
 	# numpy.random.seed(60)
 	# BranchAndPrice(50, 7)
-	# numpy.random.seed(11)
-	# BranchAndPrice(29, 7)
-	numpy.random.seed(5)
-	BranchAndPrice(15, 4)
+	numpy.random.seed(11)
+	BranchAndPrice(29, 7)
+	# numpy.random.seed(5)
+	# BranchAndPrice(15, 4)
+	# numpy.random.seed(0)
+	# BranchAndPrice(21, 5)
 
 	time_end = time.time()
 	print('Total Time: ', time_end - time_start)

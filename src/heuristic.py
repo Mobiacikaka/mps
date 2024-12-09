@@ -90,10 +90,15 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 		return False
 
 	mlp.update_contrs(column)
+	if verbose:
+		print(
+			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			'LOG::HEURISTICI: Generated Column', column, wP
+		)
 	return True
 
 def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
-	assert(len(column) == len(pi))
+	assert(len(column) == len(pi)), f'column={column}, pi={pi}'
 	pi_sum = 0.0
 	for i in range(len(column)):
 		pi_sum += column[i] * pi[i]
@@ -333,17 +338,17 @@ def SolveNode(
 			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
 			exit()
 		else:
-			print('Best Objective Value: ', mlp.model.ObjVal)
+			# print('Best Objective Value: ', mlp.model.ObjVal)
 			pass
 
 		if USE_HEURISTIC_FLAG:
 			## Generate Columns using HeuristicI
-			stime = time.time()
-			flag = HeuristicI(mlp, verbose)
-			etime = time.time()
-			runtime_H1 += etime - stime
-			if flag == True:
-				continue
+			# stime = time.time()
+			# flag = HeuristicI(mlp, verbose)
+			# etime = time.time()
+			# runtime_H1 += etime - stime
+			# if flag == True:
+			# 	continue
 
 			## Generate Columns using HeuristicII
 			stime = time.time()
