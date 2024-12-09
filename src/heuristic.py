@@ -91,13 +91,6 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 
 	mlp.update_contrs(column)
 	return True
-	# reduced_cost = subproblem.get_reduced_cost()
-	# if verbose:
-	# 	print(
-	# 		f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-	# 		'LOG::IPSOLVER::Generated Column: ', y, PriceColumn(y, pi, sigma, sigma_list, mlp.cutting_planes), reduced_cost-sigma
-	# 	)
-
 
 def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
 	assert(len(column) == len(pi))
