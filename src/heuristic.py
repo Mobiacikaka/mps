@@ -98,7 +98,7 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 	return True
 
 def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
-	assert(len(column) == len(pi)), f'column={column}, pi={pi}'
+	assert(len(column) == len(pi)), f'\ncolumn={column}\npi={pi}'
 	pi_sum = 0.0
 	for i in range(len(column)):
 		pi_sum += column[i] * pi[i]
@@ -343,12 +343,12 @@ def SolveNode(
 
 		if USE_HEURISTIC_FLAG:
 			## Generate Columns using HeuristicI
-			# stime = time.time()
-			# flag = HeuristicI(mlp, verbose)
-			# etime = time.time()
-			# runtime_H1 += etime - stime
-			# if flag == True:
-			# 	continue
+			stime = time.time()
+			flag = HeuristicI(mlp, verbose)
+			etime = time.time()
+			runtime_H1 += etime - stime
+			if flag == True:
+				continue
 
 			## Generate Columns using HeuristicII
 			stime = time.time()

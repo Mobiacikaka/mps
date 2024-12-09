@@ -1,14 +1,8 @@
-import gurobipy
 import numpy, time
 from gurobipy import GRB
 
 from graph import Graph
 from node import Node
-
-def PrintSolution(sol: list[gurobipy.Var]):
-	for var in sol:
-		if var.X == 1.0:
-			print(var.VarName)
 
 def BranchAndPrice(n: int, S: int):
 	OriginalGraph = Graph(n)
@@ -42,6 +36,8 @@ def BranchAndPrice(n: int, S: int):
 		if model_status == GRB.INFEASIBLE:
 			print('LOG::PRUNE BY INFEASIBILITY')
 			continue
+		else:
+			print('LOG::OPTIMUM', node.mlp.model.ObjVal)
 
 		node.update_lower_bound()
 		if node.lower_bound >= upper_bound:
@@ -75,20 +71,20 @@ def BranchAndPrice(n: int, S: int):
 	optimum_mlp.model.optimize()
 	sol = optimum_mlp.model.getVars()
 	for i in range(optimum_mlp.n_col):
-		if sol[i].X == 1.0:
-			print(sol[i].VarName, optimum_mlp.columns[i])
+		if sol[i].X != 0.0:
+			print(sol[i].VarName, sol[i].X, optimum_mlp.columns[i])
 
 if __name__ == '__main__':
 	time_start = time.time()
 
-	# numpy.random.seed(60)
-	# BranchAndPrice(50, 7)
-	numpy.random.seed(11)
-	BranchAndPrice(29, 7)
-	# numpy.random.seed(5)
-	# BranchAndPrice(15, 4)
+	numpy.random.seed(60)
+	BranchAndPrice(50, 7)
+	# numpy.random.seed(11)
+	# BranchAndPrice(29, 7)
 	# numpy.random.seed(0)
 	# BranchAndPrice(21, 5)
+	# numpy.random.seed(5)
+	# BranchAndPrice(15, 4)
 
 	time_end = time.time()
 	print('Total Time: ', time_end - time_start)

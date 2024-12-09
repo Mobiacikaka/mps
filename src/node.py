@@ -44,9 +44,9 @@ class Node:
 			mlp=self.mlp,
 			pip=self.pip,
 			TIME_ESTIMATION_FLAG=False,
-			USE_HEURISTIC_FLAG=False,
-			# USE_CUTTING_PLANES=self.ROOT_FLAG == True,
-			USE_CUTTING_PLANES=False,
+			USE_HEURISTIC_FLAG=True,
+			USE_CUTTING_PLANES=self.ROOT_FLAG == True,
+			# USE_CUTTING_PLANES=False,
 			verbose=False,
 		)
 		self.obj_values = self.mlp.model.ObjVal
@@ -94,6 +94,8 @@ class Node:
 		return False
 
 	def get_child_problem(self):
+		assert(self.vi < self.vj)
+
 		G_Div = copy.deepcopy(self.G)
 		G_Div.Divide(self.vi, self.vj)
 		Node_Div = Node(G_Div, self.S, self.upper_bound, self.lower_bound)
@@ -116,14 +118,20 @@ class Node:
 		for column in self.mlp.columns:
 			if column[self.vi] + column[self.vj] == 1:
 				continue
+			column: list = copy.deepcopy(column)
+			column.pop(self.vj)
 			Node_Cop.columns.append(column)
 		for cutting_plane in self.mlp.cutting_planes:
 			if cutting_plane[self.vi] + cutting_plane[self.vj] == 1:
 				continue
+			cutting_plane: list = copy.deepcopy(cutting_plane)
+			cutting_plane.pop(self.vj)
 			Node_Cop.cutting_planes.append(cutting_plane)
 		for candidate_column, weight in self.mlp.candidate_columns:
 			if candidate_column[self.vi] + candidate_column[self.vj] == 1:
 				continue
+			candidate_column: list = copy.deepcopy(candidate_column)
+			candidate_column.pop(self.vj)
 			Node_Cop.candidate_columns.append( (candidate_column, weight) )
 		Node_Cop.divide_comb = self.divide_comb.copy()
 		Node_Cop.collapse_comb = self.collapse_comb.copy() + [(self.vi, self.vj)]
