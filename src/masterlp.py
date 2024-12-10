@@ -166,15 +166,16 @@ class MLP:
 	def solve(self, flag = 0):
 		self.model.Params.OutputFlag = flag
 		self.model.optimize()
+		constrs = self.model.getConstrs()
+		self.dual_values = [constr.getAttr(GRB.Attr.Pi) for constr in constrs]
 		return self.model.getVars()
 
 	def get_dual_vars(self):
-		dual_values = [constr.getAttr(GRB.Attr.Pi) for constr in self.model.getConstrs()]
-		pi = dual_values[:self.G.n]
-		sigma = dual_values[self.G.n]
+		pi = self.dual_values[:self.G.n]
+		sigma = self.dual_values[self.G.n]
 		sigma_list = []
-		if len(dual_values) > self.G.n+1:
-			sigma_list = dual_values[self.G.n+1:]
+		if len(self.dual_values) > self.G.n+1:
+			sigma_list = self.dual_values[self.G.n+1:]
 		return pi, sigma, sigma_list
 
 	def update_contrs(self, column_coeff: list):

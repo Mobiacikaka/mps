@@ -31,15 +31,23 @@ class Graph:
 			j = EdgeName[k][1]
 			self.E[i][j] = self.E[j][i] = 0.5**(k-20)
 
+	def Size(self, subgraph: list=[]) -> int:
+		assert(len(subgraph) == self.n)
+		s = 0
+		for i in range(self.n):
+			if subgraph[i] == 1:
+				s += self.a[i]
+		return s
+
 	## subgraph consist of only 0 and 1
 	def Weight(self, subgraph: list=[]) -> float:
 		if len(subgraph) == 0:
 			subgraph = [1] * self.n
 		cluster = [i for i in range(self.n) if subgraph[i]]
-		return self.weight(cluster)
+		return self.__weight(cluster)
 
 	## subgraph consist of number less than n
-	def weight(self, subgraph: list) -> float:
+	def __weight(self, subgraph: list) -> float:
 		length = len(subgraph)
 		s = 0
 		for i in range(length-1):

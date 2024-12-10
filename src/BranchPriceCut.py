@@ -6,6 +6,7 @@ from node import Node
 
 def BranchAndPrice(n: int, S: int):
 	OriginalGraph = Graph(n)
+	OriginalGraph.PrintGraph()
 
 	node_count = 0
 	upper_bound, lower_bound = float('inf'), 0
@@ -25,7 +26,6 @@ def BranchAndPrice(n: int, S: int):
 	while candidate_node:
 		node = candidate_node.pop(0)
 		node.create_model()
-		node.G.PrintGraph(f'Graph_{node_count}.txt')
 
 		if node.lower_bound >= upper_bound:
 			print('LOG::PRUNE BY BOUND')
@@ -77,12 +77,14 @@ def BranchAndPrice(n: int, S: int):
 if __name__ == '__main__':
 	time_start = time.time()
 
-	numpy.random.seed(60)
-	BranchAndPrice(50, 7)
+	# numpy.random.seed(60)
+	# BranchAndPrice(50, 7)
+	# numpy.random.seed(0)
+	# BranchAndPrice(36, 7)
 	# numpy.random.seed(11)
 	# BranchAndPrice(29, 7)
-	# numpy.random.seed(0)
-	# BranchAndPrice(21, 5)
+	numpy.random.seed(0)
+	BranchAndPrice(21, 5)
 	# numpy.random.seed(5)
 	# BranchAndPrice(15, 4)
 

@@ -47,7 +47,7 @@ class Node:
 			USE_HEURISTIC_FLAG=True,
 			USE_CUTTING_PLANES=self.ROOT_FLAG == True,
 			# USE_CUTTING_PLANES=False,
-			verbose=False,
+			verbose=True,
 		)
 		self.obj_values = self.mlp.model.ObjVal
 		self.solution = self.mlp.model.getVars()
