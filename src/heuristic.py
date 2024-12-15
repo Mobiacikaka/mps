@@ -98,7 +98,7 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 	return True
 
 def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
-	assert(len(column) == len(pi)), f'\ncolumn={column}\npi={pi}'
+	assert(len(column) == len(pi)), f'\ncolumn={len(column)}\npi={len(pi)}'
 	pi_sum = 0.0
 	for i in range(len(column)):
 		pi_sum += column[i] * pi[i]
@@ -162,6 +162,10 @@ def HeuristicII (mlp: MLP, verbose: bool):
 			f'{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 			'LOG::HEURISTICII'
 		)
+
+	if len(mlp.cutting_planes) == 0:
+		assert(mlp.candidate_columns_cp == []), mlp.candidate_columns_cp
+
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for column, wP in mlp.candidate_columns_cp:
@@ -221,12 +225,14 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 		column = [int(x in CLIQ) for x in range(mlp.G.n)]
 		price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
 		wP = mlp.G.Weight(column)
+		# print(column, '\t', price-wP)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, column, price-wP)
 		# print(CLIQ)
 		LocalSearch(column, column_pool, mlp, depth=1)
 
 	if len(column_pool) == 0:
+		# exit()
 		return False
 
 	for column, price in column_pool:
@@ -246,12 +252,13 @@ def LocalSearchRemove(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 	if depth <= 0:
 		return
 
-	neighbor_column = column.copy()
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 
 	for i in range(mlp.G.n):
-		if neighbor_column[i] == 0:
+		if column[i] == 0:
 			continue
+
+		neighbor_column = column.copy()
 		neighbor_column[i] = 0
 		if mlp.G.Size(neighbor_column) < mlp.S:
 			break
@@ -259,10 +266,9 @@ def LocalSearchRemove(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 		wP = mlp.G.Weight(neighbor_column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, neighbor_column, price-wP)
-		LocalSearchRemove(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
-		LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
-		neighbor_column[i] = 1
-	
+		# LocalSearchRemove(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+		# LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+
 	return
 
 ## search local by adding a vertex
@@ -273,22 +279,26 @@ def LocalSearchAdd(column: list, column_pool: list, mlp: MLP, depth: int=1) -> N
 	if depth <= 0:
 		return
 
-	neighbor_column = column.copy()
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 
 	for i in range(mlp.G.n):
-		if neighbor_column[i] == 1:
+		if column[i] == 1:
 			continue
+
+		## add in the i'th vertex
+		neighbor_column = column.copy()
 		neighbor_column[i] = 1
+
 		if mlp.G.Size(neighbor_column) >= mlp.S:
 			break
+
 		price = PriceColumn(neighbor_column, pi, sigma, sigma_list, mlp.cutting_planes)
 		wP = mlp.G.Weight(neighbor_column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, neighbor_column, price-wP)
-		LocalSearchAdd(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
-		LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
-		neighbor_column[i] = 0
+
+		# LocalSearchAdd(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+		# LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
 
 	return
 
@@ -297,13 +307,15 @@ def LocalSearchSwitch(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 	if depth <= 0:
 		return
 
-	neighbor_column = column.copy()
 	pi, sigma, sigma_list = mlp.get_dual_vars()
 
 	for i in range(mlp.G.n - 1):
 		for j in range(i+1, mlp.G.n):
 			if column[i] + column[j] != 1:
 				continue
+
+			neighbor_column = column.copy()
+			neighbor_column[i], neighbor_column[j] = neighbor_column[j], neighbor_column[i]
 
 			price = PriceColumn(neighbor_column, pi, sigma, sigma_list, mlp.cutting_planes)
 			wP = mlp.G.Weight(neighbor_column)

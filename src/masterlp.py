@@ -11,6 +11,7 @@ class MLP:
 		columns: list=[],
 		cutting_planes: list=[],
 		candidate_columns: list=[],
+		candidate_columns_cp: list=[],
 	) -> None:
 		self.G = G
 		self.S = S
@@ -22,10 +23,10 @@ class MLP:
 		## cutting planes
 		self.cutting_planes = copy.deepcopy(cutting_planes)
 		self.n_cup = len(self.cutting_planes)
-		self.candidate_columns_cp = []
 
 		## candidate columns
 		self.candidate_columns = candidate_columns
+		self.candidate_columns_cp = candidate_columns_cp
 
 	def __set_vars(self) -> None:
 		if len(self.columns) > 0:
@@ -213,12 +214,28 @@ class MLP:
 
 	def is_integer(self):
 		for x in self.model.getVars():
-			if x.X > 0 and x.X < 1:
+			# if x.X > 0 and x.X < 1:
+			# 	return False
+			if math.fabs(x.X) > 1e-6 and math.fabs(x.X-1.0) > 1e-6:
 				return False
 		return True
 
 	def write(self, filename='model.lp'):
 		self.model.write(filename)
+
+	def PriceColumn(self, column):
+		pi, sigma, sigma_list = self.get_dual_vars()
+		assert(len(column) == len(pi)), f'\ncolumn={len(column)}\npi={len(pi)}'
+		pi_sum = 0.0
+		for i in range(len(column)):
+			pi_sum += column[i] * pi[i]
+
+		assert(len(sigma_list) == len(self.cutting_planes))
+		sigma_sum = 0.0
+		for i in range(len(sigma_list)):
+			sigma_sum += int(heuristic.subset(column, self.cutting_planes[i])) * sigma_list[i]
+
+		return pi_sum + sigma + sigma_sum
 
 	def AddCuttingPlanesMLP(self, Q: list):
 		xlp = self.model.getVars()

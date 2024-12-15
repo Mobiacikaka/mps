@@ -25,6 +25,7 @@ class Node:
 		self.columns = []
 		self.cutting_planes = []
 		self.candidate_columns = []
+		self.candidate_columns_cp = []
 		self.ROOT_FLAG: bool = False
 
 	def create_model(self):
@@ -34,6 +35,7 @@ class Node:
 			columns=self.columns,
 			cutting_planes=self.cutting_planes,
 			candidate_columns=self.candidate_columns,
+			candidate_columns_cp=self.candidate_columns_cp,
 		)
 		self.mlp.create_model()
 		self.pip = SUB(self.G, self.S)
@@ -47,27 +49,26 @@ class Node:
 			USE_HEURISTIC_FLAG=True,
 			USE_CUTTING_PLANES=self.ROOT_FLAG == True,
 			# USE_CUTTING_PLANES=False,
-			verbose=True,
+			verbose=False,
 		)
 		self.obj_values = self.mlp.model.ObjVal
 		self.solution = self.mlp.model.getVars()
 		return self.mlp.model.Status
 
 	def update_lower_bound(self):
+		## the fractional solution of the subnode has a lower bound higher than self.obj_values
 		if self.lower_bound < self.obj_values:
 			self.lower_bound = self.obj_values
 			# assert(self.lower_bound <= self.upper_bound), f'lower_bound={self.lower_bound}, upper_bound={self.upper_bound}'
 
 	def update_upper_bound(self):
+		## TODO: we do not assert here because
 		self.upper_bound = self.obj_values
 		# assert(self.lower_bound <= self.upper_bound), f'lower_bound={self.lower_bound}, upper_bound={self.upper_bound}'
 
 	def is_integer(self):
 		assert(self.mlp != None)
-		for var in self.mlp.model.getVars():
-			if var.X > 0 and var.X < 1:
-				return False
-		return True
+		return self.mlp.is_integer()
 
 	def is_child_problem(self) -> bool:
 		Vars = self.mlp.model.getVars()
