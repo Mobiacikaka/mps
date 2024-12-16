@@ -229,7 +229,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, column, price-wP)
 		# print(CLIQ)
-		LocalSearch(column, column_pool, mlp, depth=1)
+		LocalSearch(column, column_pool, mlp, depth=5)
 
 	if len(column_pool) == 0:
 		# exit()
@@ -266,8 +266,8 @@ def LocalSearchRemove(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 		wP = mlp.G.Weight(neighbor_column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, neighbor_column, price-wP)
-		# LocalSearchRemove(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
-		# LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+		LocalSearchRemove(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+		LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
 
 	return
 
@@ -297,8 +297,8 @@ def LocalSearchAdd(column: list, column_pool: list, mlp: MLP, depth: int=1) -> N
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, neighbor_column, price-wP)
 
-		# LocalSearchAdd(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
-		# LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+		LocalSearchAdd(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
+		LocalSearchSwitch(column=neighbor_column, column_pool=column_pool, mlp=mlp, depth=depth-1)
 
 	return
 

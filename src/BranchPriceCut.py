@@ -95,20 +95,20 @@ if __name__ == '__main__':
 	# numpy.random.seed(0)
 	# BranchAndPrice(50, 4)
 	# numpy.random.seed(60)
-	# BranchAndPrice(36, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(29, 4)
+	# BranchAndPrice(36, 7)
+	numpy.random.seed(60)
+	BranchAndPrice(29, 7)
 	# numpy.random.seed(2)
 	# BranchAndPrice(23, 4)
 	# numpy.random.seed(5)
 	# BranchAndPrice(15, 4)
 
-	for seed in range(0, 5):
-		print(f'\nseed={seed}')
-		numpy.random.seed(seed)
-		for n in [41, 42, 43]:
-			BranchAndPrice(n, 4)
-			print()
+	# for seed in range(0, 5):
+	# 	print(f'\nseed={seed}')
+	# 	numpy.random.seed(seed)
+	# 	for n in [41, 42, 43]:
+	# 		BranchAndPrice(n, 4, verbose=False)
+	# 		print()
 
 	time_end = time.time()
 	print('Total Time: ', time_end - time_start)
