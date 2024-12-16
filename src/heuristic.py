@@ -78,14 +78,15 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 			'LOG::IPSOLVER'
 		)
-	pi, sigma, sigma_list = mlp.get_dual_vars()
+
+	pi, _, _ = mlp.get_dual_vars()
 	subproblem.set_objective(pi)
 	subproblem.solve()
 	subproblem.write()
 
 	column = subproblem.get_solution()
 	wP = mlp.G.Weight(column)
-	price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+	price = mlp.PriceColumn(column)
 	if price - wP < 1e-6:
 		return False
 
@@ -96,19 +97,6 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 			'LOG::IPSOLVER: Generated Column', column, price - wP
 		)
 	return True
-
-def PriceColumn(column: list, pi: list, sigma: float, sigma_list: list, Q: list):
-	assert(len(column) == len(pi)), f'\ncolumn={len(column)}\npi={len(pi)}'
-	pi_sum = 0.0
-	for i in range(len(column)):
-		pi_sum += column[i] * pi[i]
-
-	assert(len(sigma_list) == len(Q))
-	sigma_sum = 0.0
-	for i in range(len(sigma_list)):
-		sigma_sum += int(subset(column, Q[i])) * sigma_list[i]
-
-	return pi_sum + sigma + sigma_sum
 
 def InPool(column_pool: list, columnA: list) -> bool:
 	for columnB, _ in column_pool:
@@ -134,10 +122,10 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 			f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 			'LOG::HEURISTICI'
 		)
-	pi, sigma, sigma_list = mlp.get_dual_vars()
+
 	column_pool = []
 	for column, wP in mlp.candidate_columns:
-		price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+		price = mlp.PriceColumn(column)
 		if price-wP > 1e-6:
 			MaintainPool(column_pool, column, price-wP)
 
@@ -152,7 +140,6 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 				f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
 				'LOG::HEURISTICI: Generated Column', column, price
 			)
-			# print('LOG::HEURISTICI: price', price)
 		mlp.update_contrs(column)
 	return True
 
@@ -163,13 +150,11 @@ def HeuristicII (mlp: MLP, verbose: bool):
 			'LOG::HEURISTICII'
 		)
 
-	if len(mlp.cutting_planes) == 0:
-		assert(mlp.candidate_columns_cp == []), mlp.candidate_columns_cp
+	assert(mlp.cutting_planes != [] or mlp.candidate_columns_cp == []), 'No cutting planes but there are candidate columns'
 
-	pi, sigma, sigma_list = mlp.get_dual_vars()
 	column_pool = []
 	for column, wP in mlp.candidate_columns_cp:
-		price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+		price = mlp.PriceColumn(column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, column, price-wP)
 
@@ -194,7 +179,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 			'LOG::HEURISTICIII'
 		)
 
-	pi, sigma, sigma_list = mlp.get_dual_vars()
+	pi, _, _ = mlp.get_dual_vars()
 	column_pool = []
 	for i in range(mlp.G.n):
 		CLIQ = [i]
@@ -223,7 +208,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 				break
 		CLIQ = sorted(CLIQ)
 		column = [int(x in CLIQ) for x in range(mlp.G.n)]
-		price = PriceColumn(column, pi, sigma, sigma_list, mlp.cutting_planes)
+		price = mlp.PriceColumn(column)
 		wP = mlp.G.Weight(column)
 		# print(column, '\t', price-wP)
 		if price - wP > 1e-6:
@@ -252,8 +237,6 @@ def LocalSearchRemove(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 	if depth <= 0:
 		return
 
-	pi, sigma, sigma_list = mlp.get_dual_vars()
-
 	for i in range(mlp.G.n):
 		if column[i] == 0:
 			continue
@@ -262,7 +245,7 @@ def LocalSearchRemove(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 		neighbor_column[i] = 0
 		if mlp.G.Size(neighbor_column) < mlp.S:
 			break
-		price = PriceColumn(neighbor_column, pi, sigma, sigma_list, mlp.cutting_planes)
+		price = mlp.PriceColumn(neighbor_column)
 		wP = mlp.G.Weight(neighbor_column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, neighbor_column, price-wP)
@@ -279,8 +262,6 @@ def LocalSearchAdd(column: list, column_pool: list, mlp: MLP, depth: int=1) -> N
 	if depth <= 0:
 		return
 
-	pi, sigma, sigma_list = mlp.get_dual_vars()
-
 	for i in range(mlp.G.n):
 		if column[i] == 1:
 			continue
@@ -292,7 +273,7 @@ def LocalSearchAdd(column: list, column_pool: list, mlp: MLP, depth: int=1) -> N
 		if mlp.G.Size(neighbor_column) >= mlp.S:
 			break
 
-		price = PriceColumn(neighbor_column, pi, sigma, sigma_list, mlp.cutting_planes)
+		price = mlp.PriceColumn(neighbor_column)
 		wP = mlp.G.Weight(neighbor_column)
 		if price - wP > 1e-6:
 			MaintainPool(column_pool, neighbor_column, price-wP)
@@ -307,8 +288,6 @@ def LocalSearchSwitch(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 	if depth <= 0:
 		return
 
-	pi, sigma, sigma_list = mlp.get_dual_vars()
-
 	for i in range(mlp.G.n - 1):
 		for j in range(i+1, mlp.G.n):
 			if column[i] + column[j] != 1:
@@ -317,7 +296,7 @@ def LocalSearchSwitch(column: list, column_pool: list, mlp: MLP, depth: int=1) -
 			neighbor_column = column.copy()
 			neighbor_column[i], neighbor_column[j] = neighbor_column[j], neighbor_column[i]
 
-			price = PriceColumn(neighbor_column, pi, sigma, sigma_list, mlp.cutting_planes)
+			price = mlp.PriceColumn(column)
 			wP = mlp.G.Weight(neighbor_column)
 			if price - wP > 1e-6:
 				MaintainPool(column_pool, neighbor_column, price - wP)

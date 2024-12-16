@@ -223,7 +223,7 @@ class MLP:
 	def write(self, filename='model.lp'):
 		self.model.write(filename)
 
-	def PriceColumn(self, column):
+	def PriceColumn(self, column: list):
 		pi, sigma, sigma_list = self.get_dual_vars()
 		assert(len(column) == len(pi)), f'\ncolumn={len(column)}\npi={len(pi)}'
 		pi_sum = 0.0
