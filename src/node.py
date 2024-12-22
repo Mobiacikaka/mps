@@ -123,9 +123,9 @@ class Node:
 			column.pop(self.vj)
 			Node_Cop.columns.append(column)
 		for cutting_plane in self.mlp.cutting_planes:
-			if cutting_plane[self.vi] + cutting_plane[self.vj] == 1:
-				continue
 			cutting_plane: list = copy.deepcopy(cutting_plane)
+			if cutting_plane[self.vi] + cutting_plane[self.vj] == 1:
+				cutting_plane[self.vi] = 0
 			cutting_plane.pop(self.vj)
 			Node_Cop.cutting_planes.append(cutting_plane)
 		for candidate_column, weight in self.mlp.candidate_columns:
