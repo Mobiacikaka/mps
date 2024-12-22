@@ -92,16 +92,18 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 if __name__ == '__main__':
 	time_start = time.time()
 
+	numpy.random.seed(0)
+	BranchAndPrice(101, 4)
 	# numpy.random.seed(0)
-	# BranchAndPrice(50, 4)
-	# numpy.random.seed(60)
-	# BranchAndPrice(36, 7)
-	numpy.random.seed(60)
-	BranchAndPrice(29, 7)
-	# numpy.random.seed(2)
-	# BranchAndPrice(23, 4)
-	# numpy.random.seed(5)
-	# BranchAndPrice(15, 4)
+	# BranchAndPrice(51, 4)
+	# numpy.random.seed(0)
+	# BranchAndPrice(41, 4)
+	# numpy.random.seed(0)
+	# BranchAndPrice(31, 7)
+	# numpy.random.seed(0)
+	# BranchAndPrice(21, 4)
+	# numpy.random.seed(0)
+	# BranchAndPrice(11, 4)
 
 	# for seed in range(0, 5):
 	# 	print(f'\nseed={seed}')
