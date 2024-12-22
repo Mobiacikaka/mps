@@ -1,26 +1,55 @@
-import numpy
+from math import sqrt
+import numpy, random
+
+def EuclideanDistance(vi: tuple[int, int], vj: tuple[int, int]):
+	return sqrt(
+		(vi[0] - vj[0])**2 + (vi[1] - vj[1]) ** 2
+	)
+
+def GenerateTypeIGraph(n: int):
+	maxLen = 100
+	all_vertex = []
+	for i in range(maxLen):
+		for j in range(maxLen):
+			all_vertex.append( (i, j) )
+
+	Vertex_pos = random.sample(all_vertex, n)
+
+	Edges = [
+		[
+			0.0 for _ in range(n)
+		]
+		for _ in range(n)
+	]
+	for i in range(n-1):
+		for j in range(i+1, n):
+			Edges[i][j] = Edges[j][i] = EuclideanDistance(Vertex_pos[i], Vertex_pos[j])
+
+	return Edges
+
+def GenerateTypeIIGraph(n: int):
+	Edges = [
+		[
+			0.0 for _ in range(n)
+		]
+		for _ in range(n)
+	]
+	for i in range(n-1):
+		for j in range(i+1, n):
+			Edges[i][j] = Edges[j][i] = float(numpy.random.randint(99)+1)
+	return Edges
 
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
-		self.V = []
-		self.a = []
-		self.E = []
 		self.CreateGraph()
 
 	## Random create edges
 	def CreateGraph(self):
-		## vertex
 		self.V = [i for i in range(self.n)]
-		## vertex weight
-		self.a = [1] * self.n
-		## edges
-		self.E = [ [ 0.0 for _ in range(self.n) ] for _ in range(self.n) ]
-		for i in range(self.n-1):
-			for j in range(i+1, self.n):
-				self.E[i][j] = self.E[j][i] = float(numpy.random.randint(100) + 1)
+		self.a = [1 for _ in range(self.n)]
+		self.E = GenerateTypeIGraph(self.n)
 		self.InnerEdge = [0.0 for _ in range(self.n)]
-		return
 
 	def SortEdge(self) -> None:
 		EdgeName = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
