@@ -86,15 +86,15 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 
 	column = subproblem.get_solution()
 	wP = mlp.G.Weight(column)
-	price = mlp.PriceColumn(column)
-	if price - wP < 1e-6:
+	price = mlp.PriceColumn(column) - wP
+	if price < 1e-6:
 		return False
 
 	mlp.update_contrs(column)
 	if verbose:
 		print(
 			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-			'LOG::IPSOLVER: Generated Column', column, price - wP
+			'LOG::IPSOLVER: Generated Column', column, price
 		)
 	return True
 
@@ -162,14 +162,13 @@ def HeuristicII (mlp: MLP, verbose: bool):
 		return False
 
 	column_pool = sorted(column_pool, key=lambda x: x[1], reverse=True)[:10]
-	for column_coeff, price in column_pool:
+	for column, price in column_pool:
 		if verbose:
 			print(
 				f'{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
-				'LOG::HEURISTICII: Generated Column', column_coeff
+				'LOG::HEURISTICII: Generated Column', column, price
 			)
-			# print('LOG::HEURISTICII: price', price)
-		mlp.update_contrs(column_coeff)
+		mlp.update_contrs(column)
 	return True
 
 def HeuristicIII(mlp: MLP, verbose: bool):
@@ -391,7 +390,7 @@ def SolveNode(
 
 			## Generate Columns using HeuristicIII
 			stime = time.time()
-			flag = HeuristicIII(mlp, verbose)
+			# flag = HeuristicIII(mlp, verbose)
 			etime = time.time()
 			runtime_H3 += etime - stime
 			if flag == True:
