@@ -89,26 +89,29 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 		if sol[i].X != 0.0:
 			print(sol[i].VarName, sol[i].X, optimum_mlp.columns[i])
 
+def Experiment():
+	time_start = time.time()
+
 if __name__ == '__main__':
 	time_start = time.time()
 
-	numpy.random.seed(0)
-	BranchAndPrice(101, 4)
+	# numpy.random.seed(0)
+	# BranchAndPrice(101, 4)
 	# numpy.random.seed(0)
 	# BranchAndPrice(51, 4)
+	numpy.random.seed(0)
+	BranchAndPrice(41, 4)
 	# numpy.random.seed(0)
-	# BranchAndPrice(41, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(31, 7)
+	# BranchAndPrice(31, 4)
 	# numpy.random.seed(0)
 	# BranchAndPrice(21, 4)
 	# numpy.random.seed(0)
 	# BranchAndPrice(11, 4)
 
-	# for seed in range(0, 5):
+	# for seed in range(100):
 	# 	print(f'\nseed={seed}')
-	# 	numpy.random.seed(seed)
-	# 	for n in [41, 42, 43]:
+	# 	for n in [51, 52, 53]:
+	# 		numpy.random.seed(seed)
 	# 		BranchAndPrice(n, 4, verbose=False)
 	# 		print()
 

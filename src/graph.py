@@ -1,10 +1,26 @@
-from math import sqrt
+import math
 import numpy, random
 
 def EuclideanDistance(vi: tuple[int, int], vj: tuple[int, int]):
-	return sqrt(
+	return math.sqrt(
 		(vi[0] - vj[0])**2 + (vi[1] - vj[1]) ** 2
 	)
+
+def EuclideanDistance_LG(lat1, lon1, lat2, lon2):
+	## From ChatGPT
+	# 将经纬度从度数转换为弧度
+	lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+	# 地球半径（单位：米）
+	R = 6371000
+
+	# 计算横纵坐标差值
+	x = (lon2 - lon1) * math.cos((lat1 + lat2) / 2)
+	y = lat2 - lat1
+
+	# 计算欧式距离
+	distance = R * math.sqrt(x**2 + y**2)
+	return distance
 
 def GenerateTypeIGraph(n: int):
 	maxLen = 100
@@ -39,6 +55,29 @@ def GenerateTypeIIGraph(n: int):
 			Edges[i][j] = Edges[j][i] = float(numpy.random.randint(99)+1)
 	return Edges
 
+def ReadDatasets(n: int):
+	file = open('dataset.csv')
+	data = file.readlines()[1:]
+	data = [
+		data[i][:-2].split(',')
+		for i in range(len(data))
+	]
+	pos  = [
+		(float(data[i][-2]), float(data[i][-1]))
+		for i in range(len(data))
+	]
+	pos = random.sample(pos, k=n)
+
+	Edges = [
+		[0.0 for _ in range(n)]
+		for _ in range(n)
+	]
+	for i in range(n-1):
+		for j in range(i+1, n):
+			Edges[i][j] = Edges[j][i] = EuclideanDistance_LG(pos[i][0], pos[i][1], pos[j][0], pos[j][1])
+
+	return Edges
+
 class Graph:
 	def __init__(self, n: int) -> None:
 		self.n = n
@@ -48,7 +87,8 @@ class Graph:
 	def CreateGraph(self):
 		self.V = [i for i in range(self.n)]
 		self.a = [1 for _ in range(self.n)]
-		self.E = GenerateTypeIGraph(self.n)
+		# self.E = GenerateTypeIGraph(self.n)
+		self.E = ReadDatasets(self.n)
 		self.InnerEdge = [0.0 for _ in range(self.n)]
 
 	def SortEdge(self) -> None:
