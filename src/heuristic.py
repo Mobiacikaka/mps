@@ -35,11 +35,11 @@ def GetSumofQ(xlp: List[gurobipy.Var], clusters: List[list], Q: list) -> float:
 
 def GenerateQSET(mlp: MLP, verbose: bool):
 	if verbose:
-		# print(
-		# 	f"{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
-		# 	'LOG::GenerateQSET'
-		# )
-		print(colorama.Fore.LIGHTBLUE_EX, '[', time.strftime('%H:%M:%S'), ']', colorama.Style.RESET_ALL, ' LOG::GenerateQSET', sep='')	
+		print(
+			f"{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
+			'LOG::GenerateQSET'
+		)
+		# print(colorama.Fore.LIGHTBLUE_EX, '[', time.strftime('%H:%M:%S'), ']', colorama.Style.RESET_ALL, ' LOG::GenerateQSET', sep='')	
 
 	xlp = mlp.model.getVars()
 	float_xlp = []
@@ -68,7 +68,7 @@ def GenerateQSET(mlp: MLP, verbose: bool):
 	if verbose:
 		for Q in QSet:
 			print(
-				f'{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				f"{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 				'LOG::GenerateQSET: Generated Cutting Planes', Q
 			)
 	return QSet
@@ -76,7 +76,7 @@ def GenerateQSET(mlp: MLP, verbose: bool):
 def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 	if verbose:
 		print(
-			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			f"{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 			'LOG::IPSOLVER'
 		)
 
@@ -94,7 +94,7 @@ def IPSolver(mlp: MLP, subproblem: SUB, verbose: bool):
 	mlp.update_contrs(column)
 	if verbose:
 		print(
-			f'{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			f"{colorama.Fore.YELLOW}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 			'LOG::IPSOLVER: Generated Column', column, price
 		)
 	return True
@@ -120,7 +120,7 @@ def MaintainPool(column_pool: list, column: list, price: float, MaxLen=10):
 def HeuristicI  (mlp: MLP, verbose: bool):
 	if verbose:
 		print(
-			f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			f"{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 			'LOG::HEURISTICI'
 		)
 
@@ -138,7 +138,7 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 	for column, price in column_pool:
 		if verbose:
 			print(
-				f'{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				f"{colorama.Fore.CYAN}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 				'LOG::HEURISTICI: Generated Column', column, price
 			)
 		mlp.update_contrs(column)
@@ -147,7 +147,7 @@ def HeuristicI  (mlp: MLP, verbose: bool):
 def HeuristicII (mlp: MLP, verbose: bool):
 	if verbose:
 		print(
-			f'{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			f"{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 			'LOG::HEURISTICII'
 		)
 
@@ -166,7 +166,7 @@ def HeuristicII (mlp: MLP, verbose: bool):
 	for column, price in column_pool:
 		if verbose:
 			print(
-				f'{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				f"{colorama.Fore.BLUE}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 				'LOG::HEURISTICII: Generated Column', column, price
 			)
 		mlp.update_contrs(column)
@@ -175,7 +175,7 @@ def HeuristicII (mlp: MLP, verbose: bool):
 def HeuristicIII(mlp: MLP, verbose: bool):
 	if verbose:
 		print(
-			f'{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+			f"{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 			'LOG::HEURISTICIII'
 		)
 
@@ -223,7 +223,7 @@ def HeuristicIII(mlp: MLP, verbose: bool):
 	for column, price in column_pool:
 		if verbose:
 			print(
-				f'{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}',
+				f"{colorama.Fore.MAGENTA}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
 				'LOG::HEURISTICIII: Generated Column', column, price
 			)
 		mlp.update_contrs(column)
@@ -366,7 +366,7 @@ def SolveNode(
 		runtime_MLP += etime - stime
 		mlp.write('master.lp')
 		if mlp.model.Status == GRB.INFEASIBLE:
-			print(f'{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}')
+			print(f"{colorama.Fore.RED}ERROR::INFEASIBLE!{colorama.Style.RESET_ALL}")
 			exit()
 		else:
 			# print('Best Objective Value: ', mlp.model.ObjVal)
