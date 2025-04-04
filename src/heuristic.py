@@ -35,10 +35,11 @@ def GetSumofQ(xlp: List[gurobipy.Var], clusters: List[list], Q: list) -> float:
 
 def GenerateQSET(mlp: MLP, verbose: bool):
 	if verbose:
-		print(
-			f"{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
-			'LOG::GenerateQSET'
-		)
+		# print(
+		# 	f"{colorama.Fore.LIGHTBLUE_EX}[{time.strftime('%H:%M:%S')}]{colorama.Style.RESET_ALL}",
+		# 	'LOG::GenerateQSET'
+		# )
+		print(colorama.Fore.LIGHTBLUE_EX, '[', time.strftime('%H:%M:%S'), ']', colorama.Style.RESET_ALL, ' LOG::GenerateQSET', sep='')	
 
 	xlp = mlp.model.getVars()
 	float_xlp = []
