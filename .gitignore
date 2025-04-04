@@ -35,3 +35,4 @@
 *.pyc
 
 test
+./datasets/Graph.txt

@@ -87,8 +87,8 @@ class Graph:
 	def CreateGraph(self):
 		self.V = [i for i in range(self.n)]
 		self.a = [1 for _ in range(self.n)]
-		# self.E = GenerateTypeIGraph(self.n)
-		self.E = ReadDatasets(self.n)
+		self.E = GenerateTypeIGraph(self.n)
+		# self.E = ReadDatasets(self.n)
 		self.InnerEdge = [0.0 for _ in range(self.n)]
 
 	def SortEdge(self) -> None:
