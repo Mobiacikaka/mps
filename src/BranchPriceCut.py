@@ -97,10 +97,10 @@ if __name__ == '__main__':
 
 	# numpy.random.seed(0)
 	# BranchAndPrice(101, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(51, 4)
 	numpy.random.seed(0)
-	BranchAndPrice(41, 4)
+	BranchAndPrice(51, 4)
+	# numpy.random.seed(0)
+	# BranchAndPrice(41, 4)
 	# numpy.random.seed(0)
 	# BranchAndPrice(31, 4)
 	# numpy.random.seed(0)
