@@ -18,11 +18,11 @@ class MLP:
 
 		## columns
 		self.columns = copy.deepcopy(columns)
-		self.n_col = 0
+		self.n_col = 0 ## number of columns
 
 		## cutting planes
 		self.cutting_planes = copy.deepcopy(cutting_planes)
-		self.n_cup = len(self.cutting_planes)
+		self.n_cup = len(self.cutting_planes) ## number of cutting planes
 
 		## candidate columns
 		self.candidate_columns = candidate_columns
@@ -251,6 +251,7 @@ class MLP:
 			assert(len(Qi) == self.G.n)
 			assert(Qi not in self.cutting_planes), f'Generated a duplicated cutting plane {Qi}'
 			self.cutting_planes.append(Qi)
+			self.n_cup += 1
 
 			Qi_indexes = [i for i in range(self.G.n) if Qi[i]]
 			for size in range(self.S, self.S * 2):
