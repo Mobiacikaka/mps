@@ -1,5 +1,5 @@
 import math
-import numpy, random
+import numpy
 
 def EuclideanDistance(vi: tuple[int, int], vj: tuple[int, int]):
 	return math.sqrt(
@@ -29,7 +29,7 @@ def GenerateTypeIGraph(n: int):
 		for j in range(maxLen):
 			all_vertex.append( (i, j) )
 
-	Vertex_pos = random.sample(all_vertex, n)
+	Vertex_pos = numpy.random.choice(list(range(len(all_vertex))), n)
 
 	Edges = [
 		[
@@ -39,7 +39,7 @@ def GenerateTypeIGraph(n: int):
 	]
 	for i in range(n-1):
 		for j in range(i+1, n):
-			Edges[i][j] = Edges[j][i] = EuclideanDistance(Vertex_pos[i], Vertex_pos[j])
+			Edges[i][j] = Edges[j][i] = EuclideanDistance(all_vertex[Vertex_pos[i]], all_vertex[Vertex_pos[j]])
 
 	return Edges
 
@@ -62,11 +62,11 @@ def ReadDatasets(n: int):
 		data[i][:-2].split(',')
 		for i in range(len(data))
 	]
-	pos  = [
+	all_vertex  = [
 		(float(data[i][-2]), float(data[i][-1]))
 		for i in range(len(data))
 	]
-	pos = random.sample(pos, k=n)
+	vertex = numpy.random.choice(list(range(len(all_vertex))), n)
 
 	Edges = [
 		[0.0 for _ in range(n)]
@@ -74,7 +74,9 @@ def ReadDatasets(n: int):
 	]
 	for i in range(n-1):
 		for j in range(i+1, n):
-			Edges[i][j] = Edges[j][i] = EuclideanDistance_LG(pos[i][0], pos[i][1], pos[j][0], pos[j][1])
+			vi = vertex[i]
+			vj = vertex[j]
+			Edges[i][j] = Edges[j][i] = EuclideanDistance_LG(all_vertex[vi][0], all_vertex[vi][1], all_vertex[vj][0], all_vertex[vj][1])
 
 	return Edges
 
@@ -89,12 +91,13 @@ class Graph:
 		self.a = [1 for _ in range(self.n)]
 		self.E = GenerateTypeIGraph(self.n)
 		# self.E = ReadDatasets(self.n)
+		# self.SortEdge()
 		self.InnerEdge = [0.0 for _ in range(self.n)]
 
 	def SortEdge(self) -> None:
 		EdgeName = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
 		EdgeName = sorted(EdgeName, key=lambda x: self.E[x[0]][x[1]], reverse=True)
-		self.EdgeValue = self.E
+		self.OriginalEdgeValues = self.E
 		for k in range(len(EdgeName)):
 			i = EdgeName[k][0]
 			j = EdgeName[k][1]
