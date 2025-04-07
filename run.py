@@ -12,6 +12,7 @@ if __name__ == '__main__':
 			system(f'mkdir -p S{S}/N{N}')
 			for seed in seed_list:
 				folder = f'S{S}/N{N}/{seed}'
+				print(folder)
 				system(f'mkdir -p {folder}')
 				system(f'echo "{seed}\\n{N}\\n{S}\\n" | python ../src/BranchPriceCut.py > log.txt')
 				system(f'mv Graph.txt    {folder}/')
