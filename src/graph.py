@@ -91,7 +91,7 @@ class Graph:
 		self.a = [1 for _ in range(self.n)]
 		self.E = GenerateTypeIGraph(self.n)
 		# self.E = ReadDatasets(self.n)
-		# self.SortEdge()
+		self.SortEdge()
 		self.InnerEdge = [0.0 for _ in range(self.n)]
 
 	def SortEdge(self) -> None:

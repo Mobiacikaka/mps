@@ -8,7 +8,6 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 	OriginalGraph = Graph(n)
 	OriginalGraph.PrintGraph()
 
-	node_count = 0
 	upper_bound, lower_bound = float('inf'), 0
 	root_node = Node(
 		G=OriginalGraph,
@@ -25,8 +24,12 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 
 	lp_obj_value = float('inf')
 
+	total_instances = 0
+	solved_exactly = 0
+
 	while candidate_node:
 		node = candidate_node.pop(0)
+		total_instances += 1
 		node.create_model()
 
 		if node.lower_bound >= upper_bound:
@@ -35,7 +38,7 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 			continue
 
 		model_status = node.optimize()
-		node_count += 1
+		solved_exactly += 1
 		if model_status == GRB.INFEASIBLE:
 			if verbose:
 				print('B&P::PRUNE BY INFEASIBILITY')
@@ -77,7 +80,10 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 			candidate_node.append(Node_Div)
 			candidate_node.append(Node_Cop)
 
-	print('upper_bound: ', upper_bound)
+	print()
+	print('Total instances: ', total_instances)
+	print('Solved exactly: ', solved_exactly)
+	print('Upper bound: ', upper_bound)
 	print('Divided Nodes', optimum_divide_combo)
 	print('Collapsed Nodes', optimum_collapse_combo)
 
@@ -85,35 +91,29 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 	optimum_mlp.to_int()
 	optimum_mlp.model.optimize()
 	sol = optimum_mlp.model.getVars()
+	print('Accepted Columns:')
 	for i in range(optimum_mlp.n_col):
 		if sol[i].X != 0.0:
 			print(sol[i].VarName, sol[i].X, optimum_mlp.columns[i])
 
-def Experiment():
-	time_start = time.time()
+	print()
+	print('Total Columns Generated: ', optimum_mlp.n_col)
+	print('Total Cutting Planes Generated: ', optimum_mlp.n_cup)
 
 if __name__ == '__main__':
+	seed = int(input())
+	N = int(input())
+	S = int(input())
+
+	print('seed', seed)
+	print('N', N)
+	print('S', S)
+	print()
+
 	time_start = time.time()
 
-	# numpy.random.seed(0)
-	# BranchAndPrice(101, 4)
-	numpy.random.seed(0)
-	BranchAndPrice(51, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(41, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(31, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(21, 4)
-	# numpy.random.seed(0)
-	# BranchAndPrice(11, 4)
-
-	# for seed in range(100):
-	# 	print(f'\nseed={seed}')
-	# 	for n in [51, 52, 53]:
-	# 		numpy.random.seed(seed)
-	# 		BranchAndPrice(n, 4, verbose=False)
-	# 		print()
+	numpy.random.seed(seed)
+	BranchAndPrice(N, S)
 
 	time_end = time.time()
 	print('Total Time: ', time_end - time_start)
