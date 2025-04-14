@@ -12,8 +12,8 @@ def Processing(seed: int):
 		for N in N_list:
 			cwd: str = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
 			os.system(f'mkdir -p {cwd}')
-			command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py > log.txt'
-			logfile = open(f'{cwd}/log.txt', 'w')
+			command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py'
+			logfile = open(f'{cwd}/BranchAndPrice.log', 'w')
 
 			subprocess.Popen(
 				command,
