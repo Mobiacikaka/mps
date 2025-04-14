@@ -35,7 +35,7 @@ if __name__ == '__main__':
 	process_count: int | None = os.cpu_count()
 	assert(process_count != None)
 
-	pool = multiprocessing.Pool(process_count)
+	pool = multiprocessing.Pool(process_count//2)
 	pool.starmap(Processing, seed_list)
 	pool.close()
 	pool.join()
