@@ -1,21 +1,41 @@
 #!/bin/python3
-from os import system
+import os
+import multiprocessing
+import subprocess
 
-if __name__ == '__main__':
-	seed_list = list(range(0, 100))
-	N_list = list(range(20, 51))
-	S_list = [4, 7]
+def Processing(seed: int):
+	N_list: list[int] = list(range(20, 30))
+	S_list: list[int] = list(range( 4,  5))
 
 	for S in S_list:
-		system(f'mkdir -p S{S}')
+		os.system(f'mkdir -p {home_dir}/{test_dir}/S_{S}')
 		for N in N_list:
-			system(f'mkdir -p S{S}/N{N}')
-			for seed in seed_list:
-				folder = f'S{S}/N{N}/{seed}'
-				print(folder)
-				system(f'mkdir -p {folder}')
-				system(f'echo "{seed}\\n{N}\\n{S}\\n" | python ../src/BranchPriceCut.py > log.txt')
-				system(f'mv Graph.txt    {folder}/')
-				system(f'mv log.txt      {folder}/')
-				system(f'mv master.lp    {folder}/')
-				system(f'mv sub_model.lp {folder}/')
+			cwd: str = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
+			os.system(f'mkdir -p {cwd}')
+			command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py > log.txt'
+			logfile = open(f'{cwd}/log.txt', 'w')
+
+			subprocess.Popen(
+				command,
+				cwd=cwd,
+				shell=True,
+				stdout=logfile,
+			)
+
+	return
+
+if __name__ == '__main__':
+	home_dir: str = os.getcwd()
+	test_dir: str = 'test'
+
+	os.system(f'mkdir -p {home_dir}/{test_dir}')
+
+	seed_list: list[list[int]] = [[i] for i in range(0, 10)]
+
+	process_count: int | None = os.cpu_count()
+	assert(process_count != None)
+
+	pool = multiprocessing.Pool(process_count)
+	pool.starmap(Processing, seed_list)
+	pool.close()
+	pool.join()
