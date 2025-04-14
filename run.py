@@ -4,8 +4,8 @@ import multiprocessing
 import subprocess
 
 def Processing(seed: int):
-	N_list: list[int] = list(range(20, 30))
-	S_list: list[int] = list(range( 4,  5))
+	N_list: list[int] = list(range(20, 50))
+	S_list: list[int] = list(range( 4,  9))
 
 	for S in S_list:
 		os.system(f'mkdir -p {home_dir}/{test_dir}/S_{S}')
