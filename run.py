@@ -32,10 +32,7 @@ if __name__ == '__main__':
 
 	seed_list: list[list[int]] = [[i] for i in range(0, 10)]
 
-	process_count: int | None = os.cpu_count()
-	assert(process_count != None)
-
-	pool = multiprocessing.Pool(process_count//2)
+	pool = multiprocessing.Pool(4)
 	pool.starmap(Processing, seed_list)
 	pool.close()
 	pool.join()
