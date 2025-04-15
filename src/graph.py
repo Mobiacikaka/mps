@@ -164,3 +164,51 @@ class Graph:
 		## remove vertex
 		self.n -= 1
 		self.V = list(range(self.n))
+
+class DynamicGraph:
+	def __init__(self, n: int) -> None:
+		self.n: int = n
+
+	def CreateGraph(self) -> None:
+		self.V: list[int] = [i for i in range(self.n)] ## vertex index
+		self.a: list[int] = [1 for _ in range(self.n)] ## vertex weight
+		self.E: list[list[float]] = GenerateTypeIGraph(self.n)
+		self.RankedE: list[list[float]] = self.SortEdge()
+		self.InnerE: list[float] = [0.0 for _ in range(self.n)]
+
+	def SortEdge(self, threshold: float=float('inf')) -> list:
+		EdgeName: list[tuple[int, int]] = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
+		EdgeName: list[tuple[int, int]] = sorted(EdgeName, key=lambda x: self.E[x[0]][x[1]], reverse=True)
+
+		RankedE: list[list[float]] = []
+		for _ in range(self.n):
+			RankedE.append([0.0 for _ in range(self.n)])
+
+		rank: int = 0
+		for k in range(len(EdgeName)):
+			i: int = EdgeName[k][0]
+			j: int = EdgeName[k][1]
+			if self.E[i][j] >= threshold:
+				RankedE[i][j] = RankedE[j][i] = 2**21
+			else:
+				RankedE[i][j] = RankedE[j][i] = 2**(20-rank)
+				rank += 1
+		return RankedE
+
+	## elements in subgraph are 0 or 1.
+	def Size(self, subgraph: list[int]=[]) -> int:
+		## Used to count the vertexs in the subgraph
+		assert(len(subgraph) == self.n)
+		s: int = 0
+		for i in range(self.n):
+			if subgraph[i] == 1:
+				s+= self.a[i]
+		return s
+
+	def Weight(self, subgraph: list[int]=[]) -> float:
+		## Used to count
+		if subgraph == []:
+			subgraph = [1] * self.n
+		cluster: list[int] = [i for i in range(self.n) if subgraph[i]]
+		assert(0)
+		return 0
