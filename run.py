@@ -3,9 +3,7 @@ import os
 import multiprocessing
 import subprocess
 
-def Processing(seed: int):
-	N_list: list[int] = list(range(20, 50))
-	S_list: list[int] = list(range( 4,  8))
+def Processing(seed: int, N: int, S: int):
 
 	for S in S_list:
 		os.system(f'mkdir -p {home_dir}/{test_dir}/S_{S}')
@@ -31,9 +29,25 @@ if __name__ == '__main__':
 
 	os.system(f'mkdir -p {home_dir}/{test_dir}')
 
-	seed_list: list[list[int]] = [[i] for i in range(0, 10)]
+	seed_min: int = int(input('MIN SEED: '))
+	seed_max: int = int(input('MAX SEED: '))
+	N_min: int = int(input('MIN N: '))
+	N_max: int = int(input('MAX N: '))
+	S_min: int = int(input('MIN S: '))
+	S_max: int = int(input('MAX S: '))
+
+	seed_list: list[int] = list(range(seed_min, seed_max+1))
+	N_list: list[int] = list(range(N_min, N_max+1))
+	S_list: list[int] = list(range(S_min, S_max+1))
+
+	args = [
+		(seed, N, S)
+		for seed in seed_list
+		for N in N_list
+		for S in S_list
+	]
 
 	pool = multiprocessing.Pool(processes=8)
-	pool.starmap(Processing, seed_list)
+	pool.starmap(Processing, args)
 	pool.close()
 	pool.join()
