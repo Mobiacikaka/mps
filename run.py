@@ -17,6 +17,7 @@ def Processing(seed: int, N: int, S: int):
 		shell=True,
 		stdout=logfile,
 	)
+	print(command, "FINISHED")
 
 	return
 
