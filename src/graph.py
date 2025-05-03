@@ -168,15 +168,18 @@ class Graph:
 class DynamicGraph:
 	def __init__(self, n: int) -> None:
 		self.n: int = n
+		self.MAX_POWER = 1000
+		self.MIN_POWER = -1000
+		self.threshold = 0
 
 	def CreateGraph(self) -> None:
 		self.V: list[int] = [i for i in range(self.n)] ## vertex index
 		self.a: list[int] = [1 for _ in range(self.n)] ## vertex weight
 		self.E: list[list[float]] = GenerateTypeIGraph(self.n)
-		self.RankedE: list[list[float]] = self.SortEdge()
+		# self.RankedE: list[list[float]] = self.SortEdge()
 		self.InnerE: list[float] = [0.0 for _ in range(self.n)]
 
-	def SortEdge(self, threshold: float=float('inf')) -> list:
+	def SortEdge(self, threshold: float=float('inf')) -> list[list[float]]:
 		EdgeName: list[tuple[int, int]] = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
 		EdgeName: list[tuple[int, int]] = sorted(EdgeName, key=lambda x: self.E[x[0]][x[1]], reverse=True)
 
@@ -184,14 +187,14 @@ class DynamicGraph:
 		for _ in range(self.n):
 			RankedE.append([0.0 for _ in range(self.n)])
 
-		rank: int = 0
+		rank: int = 1
 		for k in range(len(EdgeName)):
 			i: int = EdgeName[k][0]
 			j: int = EdgeName[k][1]
 			if self.E[i][j] >= threshold:
-				RankedE[i][j] = RankedE[j][i] = 2**21
+				RankedE[i][j] = RankedE[j][i] = 2.0 ** self.MAX_POWER
 			else:
-				RankedE[i][j] = RankedE[j][i] = 2**(20-rank)
+				RankedE[i][j] = RankedE[j][i] = 2.0 ** (self.MAX_POWER - rank)
 				rank += 1
 		return RankedE
 
@@ -205,10 +208,47 @@ class DynamicGraph:
 				s+= self.a[i]
 		return s
 
-	def Weight(self, subgraph: list[int]=[]) -> float:
+	def UpdateThreshold(self, threshold: float) -> None:
+		self.threshold: float = threshold
+		self.RankedE: list[list[float]] = self.SortEdge(self.threshold)
+
+	def Weight(
+		self,
+		subgraph: list[int]=[],
+		collapsed_node_pairs: list[tuple[int, int]]=[],
+		divided_node_pairs: list[tuple[int, int]]=[],
+	) -> float:
 		## Used to count
 		if subgraph == []:
 			subgraph = [1] * self.n
+		## turn the set of {0,1} to the indexs and store in "cluster"
 		cluster: list[int] = [i for i in range(self.n) if subgraph[i]]
-		assert(0)
-		return 0
+		RankedE: list[list[float]] = copy.deepcopy(self.RankedE)
+
+		## COLLAPSE
+		## TODO: How to collapse two node without breaking the original graph's structure
+		# for vi, vj in collapsed_node_pairs:
+		# 	RankedE[]
+
+		## DIVIDE
+		## set the divided pairs' edges to SYSTEM MAXIMUM
+		for vi, vj in divided_node_pairs:
+			RankedE[vi][vj] = RankedE[vj][vi] = 2.0 ** self.MAX_POWER
+
+		length: int = len(cluster)
+		weight: float = 0.0
+		for i in range(length-1):
+			for j in range(i+1, length):
+				vi: float = cluster[i]
+				vj: float = cluster[j]
+				weight += RankedE[vi][vj]
+		return weight
+
+	def PrintGraph(self, filename: str='Graph.txt') -> None:
+		f = open(filename, 'w')
+		for edges in self.E:
+			for edge in edges:
+				f.write(f'{edge}\t')
+			f.write('\n')
+		return
+

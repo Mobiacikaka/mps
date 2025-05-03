@@ -24,7 +24,7 @@ class Node:
 		self.divide_comb = []
 		self.columns = []
 		self.cutting_planes = []
-		self.candidate_columns = []
+		self.candidate_columns: list[tuple[list[int], float]] = []
 		self.candidate_columns_cp = []
 		self.ROOT_FLAG: bool = False
 
@@ -106,10 +106,8 @@ class Node:
 			Node_Div.columns.append(column)
 		for cutting_plane in self.mlp.cutting_planes:
 			Node_Div.cutting_planes.append(cutting_plane)
-		for candidate_column, weight in self.mlp.candidate_columns:
-			if candidate_column[self.vi] == 1 and candidate_column[self.vj] == 1:
-				continue
-			Node_Div.candidate_columns.append( (candidate_column, weight) )
+
+		Node_Div.candidate_columns = self.mlp.candidate_columns
 		Node_Div.divide_comb = self.divide_comb.copy() + [(self.vi, self.vj)]
 		Node_Div.collapse_comb = self.collapse_comb.copy()
 
@@ -128,12 +126,8 @@ class Node:
 				cutting_plane[self.vi] = 0
 			cutting_plane.pop(self.vj)
 			Node_Cop.cutting_planes.append(cutting_plane)
-		for candidate_column, weight in self.mlp.candidate_columns:
-			if candidate_column[self.vi] + candidate_column[self.vj] == 1:
-				continue
-			candidate_column: list = copy.deepcopy(candidate_column)
-			candidate_column.pop(self.vj)
-			Node_Cop.candidate_columns.append( (candidate_column, weight) )
+
+		Node_Cop.candidate_columns = self.candidate_columns
 		Node_Cop.divide_comb = self.divide_comb.copy()
 		Node_Cop.collapse_comb = self.collapse_comb.copy() + [(self.vi, self.vj)]
 		return Node_Div, Node_Cop
