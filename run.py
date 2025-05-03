@@ -11,14 +11,14 @@ def Processing(seed: int, N: int, S: int):
 	command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py'
 	logfile = open(f'{cwd}/BranchAndPrice.log', 'w')
 
-	print(f'[{time.strftime('%H:%M:%S')}]\tseed: {seed}\tN: {N}\tS: {S}')
+	os.system(f'echo [{time.strftime("%H:%M:%S")}]\tseed: {seed}\tN: {N}\tS: {S} >> {runlog}')
 	subprocess.run(
 		command,
 		cwd=cwd,
 		shell=True,
 		stdout=logfile,
 	)
-	print(f'[{time.strftime('%H:%M:%S')}]\tseed: {seed}\tN: {N}\tS: {S} FINISHED')
+	os.system(f'echo [{time.strftime("%H:%M:%S")}]\tseed: {seed}\tN: {N}\tS: {S} FINISHED >> {runlog}')
 
 	return
 
@@ -41,9 +41,9 @@ def run():
 		for S in S_list
 	]
 
-	print('seed_list', seed_list)
-	print('N_list', N_list)
-	print('S_list', S_list)
+	os.system(f'echo seed_list: {seed_list} > {runlog}')
+	os.system(f'echo N_list: {N_list} >> {runlog}')
+	os.system(f'echo S_list: {S_list} >> {runlog}')
 
 	pool = multiprocessing.Pool(processes=8)
 	pool.starmap(Processing, args)
@@ -53,5 +53,6 @@ def run():
 if __name__ == '__main__':
 	home_dir: str = os.getcwd()
 	test_dir: str = 'test'
+	runlog:   str = 'run.log'
 	os.system(f'mkdir -p {home_dir}/{test_dir}')
 	run()
