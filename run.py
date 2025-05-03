@@ -4,31 +4,24 @@ import multiprocessing
 import subprocess
 
 def Processing(seed: int, N: int, S: int):
+	os.system(f'mkdir -p {home_dir}/{test_dir}/S_{S}')
+	cwd: str = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
+	os.system(f'mkdir -p {cwd}')
+	command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py'
+	logfile = open(f'{cwd}/BranchAndPrice.log', 'w')
 
-	for S in S_list:
-		os.system(f'mkdir -p {home_dir}/{test_dir}/S_{S}')
-		for N in N_list:
-			cwd: str = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
-			os.system(f'mkdir -p {cwd}')
-			command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py'
-			logfile = open(f'{cwd}/BranchAndPrice.log', 'w')
-
-			print(command)
-			subprocess.run(
-				command,
-				cwd=cwd,
-				shell=True,
-				stdout=logfile,
-			)
+	print(command)
+	subprocess.run(
+		command,
+		cwd=cwd,
+		shell=True,
+		stdout=logfile,
+	)
+	print(command, "FINISHED")
 
 	return
 
-if __name__ == '__main__':
-	home_dir: str = os.getcwd()
-	test_dir: str = 'test'
-
-	os.system(f'mkdir -p {home_dir}/{test_dir}')
-
+def run():
 	seed_min: int = int(input('MIN SEED: '))
 	seed_max: int = int(input('MAX SEED: '))
 	N_min: int = int(input('MIN N: '))
@@ -51,3 +44,9 @@ if __name__ == '__main__':
 	pool.starmap(Processing, args)
 	pool.close()
 	pool.join()
+
+if __name__ == '__main__':
+	home_dir: str = os.getcwd()
+	test_dir: str = 'test'
+	os.system(f'mkdir -p {home_dir}/{test_dir}')
+	run()
