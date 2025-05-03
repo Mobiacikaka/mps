@@ -2,6 +2,7 @@
 import os
 import multiprocessing
 import subprocess
+import time
 
 def Processing(seed: int, N: int, S: int):
 	os.system(f'mkdir -p {home_dir}/{test_dir}/S_{S}')
@@ -10,14 +11,14 @@ def Processing(seed: int, N: int, S: int):
 	command = f'echo "{seed}\\n{N}\\n{S}\\n" | python {home_dir}/src/BranchPriceCut.py'
 	logfile = open(f'{cwd}/BranchAndPrice.log', 'w')
 
-	print(command)
+	print(f'[{time.strftime('%H:%M:%S')}]\tseed: {seed}\tN: {N}\tS: {S}')
 	subprocess.run(
 		command,
 		cwd=cwd,
 		shell=True,
 		stdout=logfile,
 	)
-	print(command, "FINISHED")
+	print(f'[{time.strftime('%H:%M:%S')}]\tseed: {seed}\tN: {N}\tS: {S} FINISHED')
 
 	return
 
@@ -39,6 +40,10 @@ def run():
 		for N in N_list
 		for S in S_list
 	]
+
+	print('seed_list', seed_list)
+	print('N_list', N_list)
+	print('S_list', S_list)
 
 	pool = multiprocessing.Pool(processes=8)
 	pool.starmap(Processing, args)
