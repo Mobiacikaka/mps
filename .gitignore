@@ -33,6 +33,7 @@
 
 *.lp
 *.pyc
+*.log
 
 test
 datasets/Graph.txt
