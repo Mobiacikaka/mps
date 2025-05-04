@@ -107,6 +107,10 @@ class Node:
 		for cutting_plane in self.mlp.cutting_planes:
 			Node_Div.cutting_planes.append(cutting_plane)
 
+		# for candidate_column, weight in self.mlp.candidate_columns:
+		# 	if candidate_column[self.vi] == 1 and candidate_column[self.vj] == 1:
+		# 		continue
+		# 	Node_Div.candidate_columns.append( (candidate_column, weight) )
 		Node_Div.candidate_columns = self.mlp.candidate_columns
 		Node_Div.divide_comb = self.divide_comb.copy() + [(self.vi, self.vj)]
 		Node_Div.collapse_comb = self.collapse_comb.copy()
