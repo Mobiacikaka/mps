@@ -6,6 +6,28 @@ from graph import Graph
 from masterlp import MLP
 from priceip import PriceIP as SUB
 
+##########################################################################################
+##########################################################################################
+####  Node Member Variables
+####  1. self.G
+####  1. self.S
+####  1. self.upper_bound
+####  1. self.lower_bound
+####  1. self.vi
+####  1. self.vj
+####  1. self.collapse_comb
+####  1. self.divide_comb
+####  1. self.columns
+####  1. self.cutting_planes
+####  1. self.candidate_columns
+####  1. self.candidate_columns_cp
+####  1. self.ROOT_FLAG
+####  1. self.mlp
+####  1. self.pip
+####  1. self.obj_values
+####  1. self.solution
+##########################################################################################
+##########################################################################################
 class Node:
 	def __init__(
 		self,
@@ -111,6 +133,7 @@ class Node:
 		# 	if candidate_column[self.vi] == 1 and candidate_column[self.vj] == 1:
 		# 		continue
 		# 	Node_Div.candidate_columns.append( (candidate_column, weight) )
+
 		Node_Div.candidate_columns = self.mlp.candidate_columns
 		Node_Div.divide_comb = self.divide_comb.copy() + [(self.vi, self.vj)]
 		Node_Div.collapse_comb = self.collapse_comb.copy()
@@ -130,6 +153,13 @@ class Node:
 				cutting_plane[self.vi] = 0
 			cutting_plane.pop(self.vj)
 			Node_Cop.cutting_planes.append(cutting_plane)
+
+		# for candidate_column, weight in self.mlp.candidate_columns:
+		# 	if candidate_column[self.vi] + candidate_column[self.vj] == 1:
+		# 		continue
+		# 	candidate_column: list = copy.deepcopy(candidate_column)
+		# 	candidate_column.pop(self.vj)
+		# 	Node_Cop.candidate_columns.append( (candidate_column, weight) )
 
 		Node_Cop.candidate_columns = self.candidate_columns
 		Node_Cop.divide_comb = self.divide_comb.copy()

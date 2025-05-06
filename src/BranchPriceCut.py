@@ -1,3 +1,4 @@
+import copy
 import numpy, time
 from gurobipy import GRB
 
@@ -76,9 +77,13 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 
 		if node.is_child_problem():
 			print('LOG::Branching, branched by', node.vi, node.vj)
-			Node_Div, Node_Cop = node.get_child_problem()
-			candidate_node.append(Node_Div)
-			candidate_node.append(Node_Cop)
+			# Node_Div, Node_Cop = node.get_child_problem()
+			# candidate_node.append(Node_Div)
+			# candidate_node.append(Node_Cop)
+			node_left_child  = copy.copy(node)
+			node_right_child = copy.copy(node)
+			candidate_node.append(node_left_child)
+			candidate_node.append(node_right_child)
 
 	print()
 	print('Total instances: ', total_instances)
