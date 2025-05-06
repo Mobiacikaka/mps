@@ -36,5 +36,5 @@
 *.log
 
 test
-datasets/Graph.txt
+datasets
 MP-SPDZ
