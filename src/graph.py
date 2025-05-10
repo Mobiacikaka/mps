@@ -1,97 +1,34 @@
-import math, numpy, copy
-
-def EuclideanDistance(vi: tuple[int, int], vj: tuple[int, int]):
-	return math.sqrt(
-		(vi[0] - vj[0])**2 + (vi[1] - vj[1]) ** 2
-	)
-
-def EuclideanDistance_LG(lat1, lon1, lat2, lon2):
-	## From ChatGPT
-	# 将经纬度从度数转换为弧度
-	lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-
-	# 地球半径（单位：米）
-	R = 6371000
-
-	# 计算横纵坐标差值
-	x = (lon2 - lon1) * math.cos((lat1 + lat2) / 2)
-	y = lat2 - lat1
-
-	# 计算欧式距离
-	distance = R * math.sqrt(x**2 + y**2)
-	return distance
-
-def GenerateTypeIGraph(n: int):
-	maxLen = 100
-	all_vertex = []
-	for i in range(maxLen):
-		for j in range(maxLen):
-			all_vertex.append( (i, j) )
-
-	Vertex_pos = numpy.random.choice(list(range(len(all_vertex))), n)
-
-	Edges = [
-		[
-			0.0 for _ in range(n)
-		]
-		for _ in range(n)
-	]
-	for i in range(n-1):
-		for j in range(i+1, n):
-			Edges[i][j] = Edges[j][i] = EuclideanDistance(all_vertex[Vertex_pos[i]], all_vertex[Vertex_pos[j]])
-
-	return Edges
-
-def GenerateTypeIIGraph(n: int):
-	Edges = [
-		[
-			0.0 for _ in range(n)
-		]
-		for _ in range(n)
-	]
-	for i in range(n-1):
-		for j in range(i+1, n):
-			Edges[i][j] = Edges[j][i] = float(numpy.random.randint(99)+1)
-	return Edges
-
-def ReadDatasets(n: int):
-	file = open('dataset.csv')
-	data = file.readlines()[1:]
-	data = [
-		data[i][:-2].split(',')
-		for i in range(len(data))
-	]
-	all_vertex  = [
-		(float(data[i][-2]), float(data[i][-1]))
-		for i in range(len(data))
-	]
-	vertex = numpy.random.choice(list(range(len(all_vertex))), n)
-
-	Edges = [
-		[0.0 for _ in range(n)]
-		for _ in range(n)
-	]
-	for i in range(n-1):
-		for j in range(i+1, n):
-			vi = vertex[i]
-			vj = vertex[j]
-			Edges[i][j] = Edges[j][i] = EuclideanDistance_LG(all_vertex[vi][0], all_vertex[vi][1], all_vertex[vj][0], all_vertex[vj][1])
-
-	return Edges
+import copy
 
 class Graph:
-	def __init__(self, n: int) -> None:
-		self.n = n
-		self.CreateGraph()
+	def __init__(self) -> None:
+		self.E = self.ReadGraphFromFile()
+		self.n = len(self.E)
+		self.V = [i for i in range(self.n)]
+		self.a = [1 for _ in range(self.n)]
+		self.SortEdge()
+		self.InnerEdge = [0.0 for _ in range(self.n)]
 
-	## Random create edges
+	## Read From File
 	def CreateGraph(self):
 		self.V = [i for i in range(self.n)]
 		self.a = [1 for _ in range(self.n)]
-		self.E = GenerateTypeIGraph(self.n)
-		# self.E = ReadDatasets(self.n)
+		self.E = self.ReadGraphFromFile()
 		self.SortEdge()
 		self.InnerEdge = [0.0 for _ in range(self.n)]
+
+	def ReadGraphFromFile(self, filename: str = 'graph.csv'):
+		## graph.txt format
+		## edge,edge,...,edge,
+		## edge,edge,...,edge,
+		## ....,....,...,....,
+		## edge,edge,...,edge,
+		file = open(filename, 'r')
+		lines: list[str] = [line.strip(',\n') for line in file.readlines()]
+		edges: list[list[float]] = []
+		for line in lines:
+			edges.append([float(edge) for edge in line.split(',')])
+		return edges
 
 	def SortEdge(self) -> None:
 		EdgeName = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]

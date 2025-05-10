@@ -4,8 +4,8 @@ from gurobipy import GRB
 from graph import Graph
 from node import Node
 
-def BranchAndPrice(n: int, S: int, verbose: bool=True):
-	OriginalGraph = Graph(n)
+def BranchAndPrice(S: int, verbose: bool=True):
+	OriginalGraph = Graph()
 	OriginalGraph.PrintGraph()
 
 	upper_bound, lower_bound = float('inf'), 0
@@ -101,19 +101,11 @@ def BranchAndPrice(n: int, S: int, verbose: bool=True):
 	print('Total Cutting Planes Generated: ', optimum_mlp.n_cup)
 
 if __name__ == '__main__':
-	seed = int(input())
-	N = int(input())
 	S = int(input())
-
-	print('seed', seed)
-	print('N', N)
-	print('S', S)
-	print()
 
 	time_start = time.time()
 
-	numpy.random.seed(seed)
-	BranchAndPrice(N, S)
+	BranchAndPrice(S)
 
 	time_end = time.time()
 	print('Total Time: ', time_end - time_start)
