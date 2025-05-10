@@ -5,7 +5,7 @@ def euclidean_distance(lat1, lon1, lat2, lon2):
 	lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
 	# 地球半径（单位：米）
-	R = 6371000  
+	R = 6371000
 
 	# 计算横纵坐标差值
 	x = (lon2 - lon1) * math.cos((lat1 + lat2) / 2)

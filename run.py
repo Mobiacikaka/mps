@@ -33,7 +33,7 @@ def run(test_folder_name: str):
 	subfolder_list = [x[0] for x in os.walk(f'{home_dir}/{test_root}/{test_folder_name}')]
 	instances_list = []
 	for folder in subfolder_list:
-		if 'TEST' in folder:
+		if 'TEST' in folder and 'S_' in folder:
 			instances_list.append(tuple([folder]))
 
 	logging(f'RUNNING {test_folder_name}', runlog)
@@ -47,6 +47,6 @@ if __name__ == '__main__':
 	home_dir : str = os.getcwd()
 	test_root: str = 'test'
 	runlog   : str = 'run.log'
-	TEST_FOLDER = ['RANDOM', 'REALISTIC']
+	TEST_FOLDER = input()
 	logging('TEST START', logfile=runlog, append=False)
-	run(TEST_FOLDER[0])
+	run(TEST_FOLDER)
