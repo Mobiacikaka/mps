@@ -6,7 +6,7 @@ from node import Node
 
 def BranchAndPrice(S: int, verbose: bool=True):
 	OriginalGraph = Graph()
-	OriginalGraph.PrintGraph()
+	# OriginalGraph.PrintGraph()
 
 	upper_bound, lower_bound = float('inf'), 0
 	root_node = Node(
