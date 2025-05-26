@@ -63,7 +63,7 @@ def main():
 	for N in N_list:
 		for S in S_list:
 			for seed in seed_list:
-				test_folder_name = f'{home_dir}/{test_dir}/N_{N}/S_{S}/{seed}'
+				test_folder_name = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
 				attr: dict = ReadFolder(test_folder_name)
 				if attr == {}:
 					continue
