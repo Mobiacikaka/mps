@@ -2,7 +2,13 @@ import os, ast
 import matplotlib.pyplot as plt
 
 def ReadFolder(folder_name: str) -> dict:
-	logfile = open(f'{folder_name}/BranchAndPrice.log', 'r')
+	logfile = None
+	try:
+		logfile = open(f'{folder_name}/BranchAndPrice.log', 'r')
+	except:
+		print(folder_name, 'ERROR')
+	if logfile == None:
+		return {}
 	lines: list = logfile.readlines()
 	attribute: dict = {}
 	solution : list = [] ## solution lines
@@ -28,7 +34,7 @@ def ReadFolder(folder_name: str) -> dict:
 		if 'Divided Nodes' in line:
 			attribute['divided'] = ast.literal_eval(line.strip('Divided Nodes '))
 			continue
-		if 'Collapsed Nodes ' in line
+		if 'Collapsed Nodes ' in line:
 			attribute['collapsed'] = ast.literal_eval(line.strip('Collapsed Nodes '))
 			continue
 		if ' 1.0 ' in line:
@@ -59,6 +65,8 @@ def main():
 			for seed in seed_list:
 				test_folder_name = f'{home_dir}/{test_dir}/N_{N}/S_{S}/{seed}'
 				attr: dict = ReadFolder(test_folder_name)
+				if attr == {}:
+					continue
 				attr['N'] = N
 				attr['S'] = S
 				attr['seed'] = seed
