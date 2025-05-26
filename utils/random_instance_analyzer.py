@@ -73,9 +73,11 @@ def main():
 				AttributeList.append(attr)
 
 	for attr in AttributeList:
-		print(attr)
+		if attr['solution'] == []:
+			continue
+		print(attr['solution'])
 		UnfoldSolution(attr['solution'], attr['collapsed'])
-		print(attr)
+		print(attr['solution'])
 		print()
 
 	# for attribute in AttributeList:
