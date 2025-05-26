@@ -64,6 +64,7 @@ def main():
 		for S in S_list:
 			for seed in seed_list:
 				test_folder_name = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
+				# test_folder_name = f'{home_dir}/{test_dir}/N_{N}/S_{S}/TEST{seed}'
 				attr: dict = ReadFolder(test_folder_name)
 				if attr == {}:
 					continue
@@ -75,9 +76,12 @@ def main():
 	for attr in AttributeList:
 		if attr['solution'] == []:
 			continue
-		print(attr['solution'])
+		for sol in attr['solution']:
+			print(sol)
 		UnfoldSolution(attr['solution'], attr['collapsed'])
-		print(attr['solution'])
+		print(attr['collapsed'])
+		for sol in attr['solution']:
+			print(sol)
 		print()
 
 	# for attribute in AttributeList:
