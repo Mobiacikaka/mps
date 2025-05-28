@@ -51,7 +51,7 @@ def UnfoldSolution(solution_list: list, collapsed_comb: list) -> list:
 			solution.insert(y, solution[x])
 	return solution_list
 
-def main():
+def ReadRandom():
 	home_dir = os.getcwd()
 	test_dir: str = 'test/RANDOM_OLD'
 
@@ -66,27 +66,10 @@ def main():
 				test_folder_name = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
 				# test_folder_name = f'{home_dir}/{test_dir}/N_{N}/S_{S}/TEST{seed}'
 				attr: dict = ReadFolder(test_folder_name)
-				if attr == {}:
-					continue
 				attr['N'] = N
 				attr['S'] = S
 				attr['seed'] = seed
 				AttributeList.append(attr)
 
 	for attr in AttributeList:
-		if attr['solution'] == []:
-			continue
-		for sol in attr['solution']:
-			print(sol)
 		UnfoldSolution(attr['solution'], attr['collapsed'])
-		print(attr['collapsed'])
-		for sol in attr['solution']:
-			print(sol)
-		print()
-
-	# for attribute in AttributeList:
-	# 	if attribute['N'] != 20:
-	# 		continue
-
-if __name__ == '__main__':
-	main()
