@@ -1,0 +1,31 @@
+#############################
+###                      ####
+#############################
+
+## users' number in a group
+n = 4
+datalist = []
+rlist = []
+
+## Read data
+for i in range(n):
+	datalist.append(sint.get_input_from(i))
+
+## Read random number
+for i in range(n):
+	rlist.append(sint.get_input_from(i))
+
+## Calculate the real D
+D = sint(0)
+for i in range(n):
+	D += datalist[i]
+
+## Calculate the real r
+r = sint(0)
+for i in range(n):
+	r += rlist[i]
+
+## Calculate r*D
+rD = r * D
+rD = rD.reveal()
+print_ln('rD: %s', rD)
