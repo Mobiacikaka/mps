@@ -71,7 +71,7 @@ class Graph:
 		f = open(filename, 'w')
 		for edges in self.OriginalEdgeValues:
 			for edge in edges:
-				f.write(str(edge)+' \t')
+				f.write(str(edge)+',')
 			f.write('\n')
 
 	def Divide(self, i: int, j: int):
