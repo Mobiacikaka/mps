@@ -1,4 +1,4 @@
-import numpy, subprocess, os, sys
+import numpy, subprocess, os, sys, socket
 
 sys.path.append('../')
 from utils.random_instance_analyzer import ReadRandom
@@ -15,20 +15,19 @@ def changeN(n: int):
 
 	return
 
-def GetVertice(edges, column) -> list:
+def GetVertice(edges_G: list[list[float]], column: list[int]) -> tuple[list, list]:
 	vertice: list = []
 	for i in range(len(column)):
 		if column[i] == 1:
 			vertice.append(i)
-	return vertice
+	n = len(vertice)
+	edges_C: list = [[0 for _ in range(n)] for _ in range(n)]
 
-def main2():
-	AttributeList: list = ReadRandom()
-	for attribute in AttributeList:
-		solution: list = attribute['solution']
-		edges: list = attribute['edges']
-		for column in solution:
-			vertice = GetVertice(edges, column)
+	for i in range(n-1):
+		for j in range(i+1, n):
+			edges_C[i][j] = edges_C[j][i] = edges_G[vertice[i]][vertice[j]]
+
+	return vertice, edges_C
 
 def random(lb: int=0, ub: int=2**20):
 	assert(lb < ub)
@@ -114,6 +113,9 @@ def SecureCompare(users_list: list[User], index_i: int, index_j: int) -> bool:
 	return True
 
 def Shuffle(n: int) -> None:
+	## rewrite shuffle.mpc to change its n
+	changeN(n)
+
 	users_list: list[User] = []
 	for i in range(n):
 		users_list.append(User(i))
@@ -131,8 +133,85 @@ def Shuffle(n: int) -> None:
 				for user in users_list:
 					user.SwapShare(i, j)
 
+def find_free_ports(count: int, host='127.0.0.1'):
+	free_ports = []
+	sockets = []
+	try:
+		for _ in range(count):
+			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			s.bind((host, 0))
+			port = s.getsockname()[1]
+			free_ports.append(port)
+			sockets.append(s)
+	finally:
+		for s in sockets:
+			s.close()
+	return free_ports
+
+def SetLatency(latency: list, free_ports: list):
+	n: int = len(latency)
+	assert(n == len(free_ports))
+
+	## 1.1 Delete any existing qdisc on lo
+	os.system('sudo tc qdisc del dev lo root 2> /dev/null || true')
+
+	## 2.1 Add root HTB handle “1:” on loopback
+	os.system('sudo tc qdisc add dev lo root handle 1: htb')
+
+	## 2.2 Create Class 1:1 → “no extra delay” (this is the default fallback)
+	os.system('sudo tc class add dev lo parent 1: classid 1:1 htb rate 1000mbit')
+
+	## 3.1 
+	k: int = 2
+	for i in range(n-1):
+		for j in range(i+1, n):
+			os.system(f'sudo tc class add dev lo parent 1: classid 1:{k} htb rate 1000mbit')
+			os.system(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]}ms')
+			k += 1
+
+			os.system(f'sudo tc class add dev lo parent 1: classid 1:{k} htb rate 1000mbit')
+			os.system(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]}ms')
+			k += 1
+	
+	k: int = 2
+	for i in range(n-1):
+		for j in range(i+1, n):
+			os.system(f'\
+tc filter add dev lo protocol ip parent 1: prio 1 u32 \
+    match ip src   127.0.0.1/32 \
+    match ip dst   127.0.0.1/32 \
+    match ip sport {free_ports[i]} 0xffff \
+    match ip dport {free_ports[j]} 0xffff \
+    flowid 1:{k}')
+			k += 1
+			os.system(f'\
+tc filter add dev lo protocol ip parent 1: prio 1 u32 \
+    match ip src   127.0.0.1/32 \
+    match ip dst   127.0.0.1/32 \
+    match ip sport {free_ports[j]} 0xffff \
+    match ip dport {free_ports[i]} 0xffff \
+    flowid 1:{k}')
+			k += 1
+	return
+
+def RemoveLatency():
+	os.system('sudo tc qdisc del dev lo root')
+	return
+
 def main():
-	Shuffle(4)
+	AttributeList: list = ReadRandom()
+	for attribute in AttributeList:
+		solution: list = attribute['solution']
+		edges_G: list = attribute['edges'] ## Edges in Global Graph
+		for column in solution:
+			vertice, edges_C = GetVertice(edges_G, column) ## Edges in Clique
+			n = len(vertice)
+			free_ports: list = find_free_ports(n)
+			assert(len(free_ports) == n)
+			SetLatency(edges_C, free_ports)
+			Shuffle(n)
+			RemoveLatency()
+	return
 
 if __name__ == '__main__':
 	main()
