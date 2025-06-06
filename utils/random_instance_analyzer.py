@@ -8,7 +8,7 @@ def UnfoldSolution(solution_list: list, collapsed_comb: list) -> list:
 			solution.insert(y, solution[x])
 	return solution_list
 
-def ReadFolder(folder_name: str) -> dict:
+def ReadFolder(folder_name: str) -> dict | None:
 	logfile = None
 	graphfile = None
 	try:
@@ -17,7 +17,7 @@ def ReadFolder(folder_name: str) -> dict:
 	except:
 		print(folder_name, 'ERROR')
 	if logfile == None or graphfile == None:
-		return {}
+		return None
 
 	## Read Log
 	lines: list = logfile.readlines()
@@ -51,6 +51,8 @@ def ReadFolder(folder_name: str) -> dict:
 		if ' 1.0 ' in line:
 			solution.append(ast.literal_eval(line.split(' 1.0 ')[1]))
 			continue
+	if solution == []:
+		return None
 	attribute['solution'] = solution
 	UnfoldSolution(attribute['solution'], attribute['collapsed'])
 
@@ -69,8 +71,12 @@ def ReadRandom():
 	test_dir: str = 'test/RANDOM_OLD'
 
 	seed_list = list(range(0, 10))
-	N_list = list(range(20, 50))
-	S_list = [4, 5, 6, 7, 8]
+	## REAL TEST
+	# N_list = list(range(20, 50))
+	# S_list = [4, 5, 6, 7, 8]
+	## LOCAL TEST
+	N_list = [20]
+	S_list = [4]
 
 	AttributeList: list = []
 	for N in N_list:
@@ -78,7 +84,9 @@ def ReadRandom():
 			for seed in seed_list:
 				test_folder_name = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
 				# test_folder_name = f'{home_dir}/{test_dir}/N_{N}/S_{S}/TEST{seed}'
-				attribute: dict = ReadFolder(test_folder_name)
+				attribute: dict | None = ReadFolder(test_folder_name)
+				if attribute == None:
+					continue
 				attribute['N'] = N
 				attribute['S'] = S
 				attribute['seed'] = seed
