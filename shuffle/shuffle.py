@@ -1,5 +1,5 @@
 from io import TextIOWrapper
-import numpy, subprocess, os, sys, socket, time
+import numpy, subprocess, os, sys, socket, time, traceback
 
 sys.path.append('/home/justin/Documents/mps/')
 from utils.random_instance_analyzer import ReadRandom
@@ -96,7 +96,13 @@ class User:
 		f.write(str(r) + '\n')
 		f.close()
 
-def SecureCompare(users_list: list[User], index_i: int, index_j: int) -> bool:
+def SecureCompare(
+	users_list: list[User],
+	index_i: int,
+	index_j: int,
+	sockets: list[socket.socket],
+	free_ports: list[int],
+) -> bool:
 	for user in users_list:
 		user.WriteData(index_i, index_j)
 	### Use SPDZ to compare the value
@@ -104,6 +110,7 @@ def SecureCompare(users_list: list[User], index_i: int, index_j: int) -> bool:
 	binary : str = '/home/justin/Documents/MP-SPDZ/semi-party.x'
 	ip_file: str = '/home/justin/Documents/mps/shuffle/ip_file'
 	cwd    : str = '/home/justin/Documents/mps/shuffle'
+
 	for i in range(n-1):
 		logfile = open(f'{cwd}/logs/user{i}.log', 'w')
 		SudoCommand(
@@ -135,8 +142,9 @@ def SecureCompare(users_list: list[User], index_i: int, index_j: int) -> bool:
 	if verbose:
 		print()
 	assert(0) ## There is no rD output in user0.log
+	return False
 
-def Shuffle(n: int) -> None:
+def Shuffle(n: int, sockets: list[socket.socket], free_ports: list[int]) -> None:
 	users_list: list[User] = []
 	for i in range(n):
 		users_list.append(User(i))
@@ -150,15 +158,15 @@ def Shuffle(n: int) -> None:
 
 	for i in range(n-1):
 		for j in range(i+1, n):
-			if SecureCompare(users_list, i, j):
+			if SecureCompare(users_list, i, j, sockets, free_ports):
 				for user in users_list:
 					user.SwapShare(i, j)
 
 	return
 
 def find_free_ports(count: int, host='127.0.0.1'):
-	free_ports = []
-	sockets = []
+	free_ports: list[int] = []
+	sockets: list[socket.socket] = []
 	try:
 		for _ in range(count):
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -167,13 +175,12 @@ def find_free_ports(count: int, host='127.0.0.1'):
 			free_ports.append(port)
 			sockets.append(s)
 	finally:
-		for s in sockets:
-			s.close()
+		pass
 
 	ip_file = open('/home/justin/Documents/mps/shuffle/ip_file', 'w')
 	for port in free_ports:
 		ip_file.write(f'{host}:{port}\n')
-	return free_ports
+	return free_ports, sockets
 
 def SetLatency(latency: list, free_ports: list):
 	n: int = len(latency)
@@ -193,11 +200,11 @@ def SetLatency(latency: list, free_ports: list):
 	for i in range(n-1):
 		for j in range(i+1, n):
 			SudoCommand(f'sudo tc class add dev lo parent 1: classid 1:{k} htb rate 1000mbit')
-			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]}ms')
+			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]*10}ms')
 			k += 1
 
 			SudoCommand(f'sudo tc class add dev lo parent 1: classid 1:{k} htb rate 1000mbit')
-			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]}ms')
+			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]*10}ms')
 			k += 1
 
 	k: int = 2
@@ -211,14 +218,12 @@ def SetLatency(latency: list, free_ports: list):
 
 def RemoveLatency():
 	SudoCommand('sudo tc qdisc del dev lo root')
-	return
 
 def CompileMPC():
 	SudoCommand('/home/justin/Documents/MP-SPDZ/compile.py /home/justin/Documents/mps/shuffle/shuffle.mpc')
 
 def main():
 	AttributeList: list = ReadRandom()
-	run_time = []
 	for attribute in AttributeList:
 		if verbose:
 			print('\nN\t', attribute['N'], '\nS\t', attribute['S'], '\nseed\t', attribute['seed'])
@@ -226,7 +231,7 @@ def main():
 		## Each attribute is a setting of Clique Partition
 		solution: list = attribute['solution']
 		edges_G: list = attribute['edges'] ## Edges of Global Graph
-		time_used = []
+		attribute['runtime'] = time_used = []
 		for column in solution:
 			## Acquire the vertice index list and the clique's edges list
 			vertice, edges_C = GetVertice(edges_G, column) ## Edges in Clique
@@ -236,25 +241,34 @@ def main():
 			changeN(n)
 			CompileMPC()
 
-			## Get the system's free ports for shuffling
-			free_ports: list = find_free_ports(n)
-			assert(len(free_ports) == n)
+			loopFlag = True
+			while loopFlag:
+				try:
+					## Get the system's free ports for shuffling
+					free_ports, sockets = find_free_ports(n)
+					assert(len(free_ports) == n)
 
-			## Set the latency between ports according to edges in clique
-			# SetLatency(edges_C, free_ports)
+					## Set the latency between ports according to edges in clique
+					SetLatency(edges_C, free_ports)
 
-			time_begin = time.time()
-			Shuffle(n)
-			time_used.append(time.time() - time_begin)
+					for s in sockets:
+						s.close()
 
-			## Remove all latency after shuffling
-			# RemoveLatency()
+					time_begin = time.time()
+					Shuffle(n, sockets, free_ports)
+					time_end = time.time()
 
-		run_time.append(time_used)
+					## Remove all latency after shuffling
+					RemoveLatency()
+					time_used.append(time_end - time_begin)
+					loopFlag = False
+				except:
+					traceback.print_exc()
+					print()
 
 	if verbose:
-		for time_used in run_time:
-			print(time_used)
+		for attribute in AttributeList:
+			print(attribute['N'], attribute['S'], attribute['seed'], attribute['runtime'])
 
 if __name__ == '__main__':
 	verbose = True
