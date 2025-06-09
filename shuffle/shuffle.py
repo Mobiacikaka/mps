@@ -147,7 +147,7 @@ def SecureCompare(
 	assert(0) ## There is no rD output in user0.log
 	return False
 
-def Shuffle(n: int, sockets: list[socket.socket], free_ports: list[int]) -> None:
+def Shuffle(n: int, sockets: list[socket.socket], free_ports: list[int]) -> tuple[float, float]:
 	users_list: list[User] = []
 	for i in range(n):
 		users_list.append(User(i))
@@ -159,13 +159,22 @@ def Shuffle(n: int, sockets: list[socket.socket], free_ports: list[int]) -> None
 			userB = users_list[j]
 			userB.UpdateShares(shares_list[j])
 
+	runtime: float = 0
+	comm_overhead: float = 0
 	for i in range(n-1):
 		for j in range(i+1, n):
 			if SecureCompare(users_list, i, j, sockets, free_ports):
 				for user in users_list:
 					user.SwapShare(i, j)
+			user0log = open(f'{root_dir}/shuffle/logs/user0.log', 'r')
+			lines = user0log.readlines()
+			for line in lines:
+				if 'Time' in line:
+					runtime += float(line.split(' ')[2])
+				if 'Global data sent' in line:
+					comm_overhead += float(line.split(' ')[4])
 
-	return
+	return runtime, comm_overhead
 
 def find_free_ports(count: int):
 	free_ports: list[int] = []
@@ -242,6 +251,7 @@ def main():
 		solution: list = attribute['solution']
 		edges_G: list = attribute['edges'] ## Edges of Global Graph
 		attribute['runtime'] = time_used = []
+		attribute['communication'] = communication = []
 		for column in solution:
 			## Acquire the vertice index list and the clique's edges list
 			vertice, edges_C = GetVertice(edges_G, column) ## Edges in Clique
@@ -266,22 +276,16 @@ def main():
 						s.close()
 
 					loopFlag = True
-					time_begin = time.time()
-					Shuffle(n, sockets, free_ports)
-					time_end = time.time()
+					runtime, comm_overhead = Shuffle(n, sockets, free_ports)
 					loopFlag = False
 
 					## Remove all latency after shuffling
 					RemoveLatency(n)
-					time_used.append(time_end - time_begin)
+					time_used.append(runtime)
+					communication.append(comm_overhead)
 				except:
 					traceback.print_exc()
 					print()
-
-	if verbose:
-		for attribute in AttributeList:
-			print(attribute['N'], attribute['S'], attribute['seed'], attribute['runtime'])
-			# json.dumps(attribute, indent=4)
 
 	SudoCommand('mkdir -p DATA')
 	for attribute in AttributeList:
