@@ -1,12 +1,14 @@
 from io import TextIOWrapper
-import numpy, subprocess, os, sys, socket, time, traceback
+import numpy, subprocess, os, sys, socket, time, traceback, json
 
-sys.path.append('/home/justin/Documents/mps/')
+## WARNING: the script has to run in the repository root
+root_dir = os.getcwd()
+sys.path.append(root_dir)
 from utils.random_instance_analyzer import ReadRandom
 
 def SudoCommand(
 	command: str,
-	cwd: str='/home/justin/Documents/mps/shuffle',
+	cwd: str=f'{root_dir}/shuffle',
 	stdout: None|TextIOWrapper=None,
 	stderr: None|TextIOWrapper=None,
 ):
@@ -107,14 +109,15 @@ def SecureCompare(
 		user.WriteData(index_i, index_j)
 	### Use SPDZ to compare the value
 	n = len(users_list)
-	binary : str = '/home/justin/Documents/MP-SPDZ/semi-party.x'
-	ip_file: str = '/home/justin/Documents/mps/shuffle/ip_file'
-	cwd    : str = '/home/justin/Documents/mps/shuffle'
+	binary : str = f'{root_dir}/MP-SPDZ/semi-party.x'
+	## TODO: ip_file is somehow not working, so we choose to use --hostname and --my-port
+	# ip_file: str = f'{root_dir}/shuffle/ip_file'
+	cwd    : str = f'{root_dir}/shuffle'
 
 	for i in range(n-1):
 		logfile = open(f'{cwd}/logs/user{i}.log', 'w')
 		SudoCommand(
-			f'{binary} shuffle -N {n} -p {i} -ip {ip_file} -v &',
+			f'{binary} shuffle -N {n} -p {i} --hostname 127.0.0.{11+i} --my-port {free_ports[i]} -v &',
 			cwd   = cwd,
 			stdout= logfile,
 			stderr= logfile,
@@ -122,7 +125,7 @@ def SecureCompare(
 		logfile.close()
 	logfile = open(f'{cwd}/logs/user{n-1}.log', 'w')
 	SudoCommand(
-		f'{binary} shuffle -N {n} -p {n-1} -ip {ip_file} -v',
+		f'{binary} shuffle -N {n} -p {n-1} --hostname 127.0.0.{11+n-1} --my-port {free_ports[n-1]} -v',
 		cwd   = cwd,
 		stdout= logfile,
 		stderr= logfile,
@@ -164,63 +167,68 @@ def Shuffle(n: int, sockets: list[socket.socket], free_ports: list[int]) -> None
 
 	return
 
-def find_free_ports(count: int, host='127.0.0.1'):
+def find_free_ports(count: int):
 	free_ports: list[int] = []
 	sockets: list[socket.socket] = []
 	try:
 		for _ in range(count):
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			s.bind((host, 0))
+			s.bind(('127.0.0.1', 0))
 			port = s.getsockname()[1]
 			free_ports.append(port)
 			sockets.append(s)
 	finally:
 		pass
 
-	ip_file = open('/home/justin/Documents/mps/shuffle/ip_file', 'w')
+	ip_file = open(f'{root_dir}/shuffle/ip_file', 'w')
+	host: int = 11
 	for port in free_ports:
-		ip_file.write(f'{host}:{port}\n')
+		ip_file.write(f'127.0.0.{host}:{port}\n')
+		host += 1
 	return free_ports, sockets
 
 def SetLatency(latency: list, free_ports: list):
 	n: int = len(latency)
 	assert(n == len(free_ports))
 
+	# latency = [[0 for _ in range(n)] for _ in range(n)]
+
+	# 0. First add virtual ip
+	for i in range(n):
+		SudoCommand(f'sudo ip addr add 127.0.0.{11+i}/8 dev lo')
+
 	## 1.1 Delete any existing qdisc on lo
 	SudoCommand('sudo tc qdisc del dev lo root 2> /dev/null || true')
 
 	## 2.1 Add root HTB handle “1:” on loopback
-	SudoCommand('sudo tc qdisc add dev lo root handle 1: htb')
+	SudoCommand('sudo tc qdisc add dev lo root handle 1: htb default 1')
 
 	## 2.2 Create Class 1:1 → “no extra delay” (this is the default fallback)
 	SudoCommand('sudo tc class add dev lo parent 1: classid 1:1 htb rate 1000mbit')
 
-	## 3.1
+	## 3.1 create delay class with netem
 	k: int = 2
 	for i in range(n-1):
 		for j in range(i+1, n):
 			SudoCommand(f'sudo tc class add dev lo parent 1: classid 1:{k} htb rate 1000mbit')
-			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]*10}ms')
-			k += 1
-
-			SudoCommand(f'sudo tc class add dev lo parent 1: classid 1:{k} htb rate 1000mbit')
-			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]*10}ms')
+			SudoCommand(f'sudo tc qdisc add dev lo parent 1:{k} handle {k}: netem delay {latency[i][j]}ms')
 			k += 1
 
 	k: int = 2
 	for i in range(n-1):
 		for j in range(i+1, n):
-			SudoCommand(f'sudo tc filter add dev lo protocol ip parent 1: prio 1 u32 match ip src 127.0.0.1/32 match ip dst 127.0.0.1/32 match ip sport {free_ports[i]} 0xffff match ip dport {free_ports[j]} 0xffff flowid 1:{k}')
-			k += 1
-			SudoCommand(f'sudo tc filter add dev lo protocol ip parent 1: prio 1 u32 match ip src 127.0.0.1/32 match ip dst 127.0.0.1/32 match ip sport {free_ports[j]} 0xffff match ip dport {free_ports[i]} 0xffff flowid 1:{k}')
+			SudoCommand(f'sudo tc filter add dev lo protocol ip parent 1: prio 1 u32 match ip src 127.0.0.{11+i}/8 match ip dst 127.0.0.{11+j}/8 flowid 1:{k}')
+			SudoCommand(f'sudo tc filter add dev lo protocol ip parent 1: prio 1 u32 match ip src 127.0.0.{11+j}/8 match ip dst 127.0.0.{11+i}/8 flowid 1:{k}')
 			k += 1
 	return
 
-def RemoveLatency():
+def RemoveLatency(n: int):
+	for i in range(n):
+		SudoCommand(f'sudo ip addr delete 127.0.0.{11+i}/8 dev lo')
 	SudoCommand('sudo tc qdisc del dev lo root')
 
 def CompileMPC():
-	SudoCommand('/home/justin/Documents/MP-SPDZ/compile.py /home/justin/Documents/mps/shuffle/shuffle.mpc')
+	SudoCommand(f'{root_dir}/MP-SPDZ/compile.py {root_dir}/shuffle/shuffle.mpc')
 
 def main():
 	AttributeList: list = ReadRandom()
@@ -259,7 +267,7 @@ def main():
 					time_end = time.time()
 
 					## Remove all latency after shuffling
-					RemoveLatency()
+					RemoveLatency(n)
 					time_used.append(time_end - time_begin)
 					loopFlag = False
 				except:
@@ -269,7 +277,19 @@ def main():
 	if verbose:
 		for attribute in AttributeList:
 			print(attribute['N'], attribute['S'], attribute['seed'], attribute['runtime'])
+			# json.dumps(attribute, indent=4)
+
+	SudoCommand('mkdir -p DATA')
+	for attribute in AttributeList:
+		folder:str = f'DATA/N{attribute['N']}/S{attribute['S']}/seed{attribute['seed']}'
+		SudoCommand(f'mkdir -p {folder}')
+		datafile = open(f'shuffle/{folder}/log.json', 'w')
+		datafile.write(json.dumps(attribute, indent=4))
+
+def BuildMPSPDZ():
+	SudoCommand('make -j8 semi-party.x > /dev/null 2>&1', cwd=f'{root_dir}/MP-SPDZ')
 
 if __name__ == '__main__':
 	verbose = True
+	BuildMPSPDZ()
 	main()
