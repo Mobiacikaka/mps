@@ -231,6 +231,8 @@ def CompileMPC():
 	SudoCommand(f'{root_dir}/MP-SPDZ/compile.py {root_dir}/shuffle/shuffle.mpc')
 
 def main():
+	SudoCommand('mkdir -p logs')
+
 	AttributeList: list = ReadRandom()
 	for attribute in AttributeList:
 		if verbose:
