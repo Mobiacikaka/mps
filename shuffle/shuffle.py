@@ -281,7 +281,7 @@ def main():
 
 	SudoCommand('mkdir -p DATA')
 	for attribute in AttributeList:
-		folder:str = f'DATA/N{attribute['N']}/S{attribute['S']}/seed{attribute['seed']}'
+		folder:str = f'DATA/N{attribute["N"]}/S{attribute["S"]}/seed{attribute["seed"]}'
 		SudoCommand(f'mkdir -p {folder}')
 		datafile = open(f'shuffle/{folder}/log.json', 'w')
 		datafile.write(json.dumps(attribute, indent=4))
