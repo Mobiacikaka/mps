@@ -71,13 +71,13 @@ def ReadRandom():
 	test_dir: str = 'test/RANDOM_OLD'
 
 	## REAL TEST
-	seed_list = list(range(0, 10))
-	N_list = list(range(20, 50))
-	S_list = [4, 5, 6, 7, 8]
+	# seed_list = list(range(0, 10))
+	# N_list = list(range(20, 50))
+	# S_list = [4, 5, 6, 7, 8]
 	## LOCAL TEST
-	# N_list = [20]
-	# S_list = [4]
-	# seed_list = [3]
+	N_list = [20]
+	S_list = [4]
+	seed_list = [3]
 
 	AttributeList: list = []
 	for N in N_list:
