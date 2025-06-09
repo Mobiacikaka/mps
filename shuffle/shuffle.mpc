@@ -3,7 +3,7 @@
 #############################
 
 ## users' number in a group
-n = 4
+n = 5
 datalist = []
 rlist = []
 
