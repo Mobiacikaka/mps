@@ -1,4 +1,4 @@
-import os, ast
+import os, ast, traceback
 import matplotlib.pyplot as plt
 
 def UnfoldSolution(solution_list: list, collapsed_comb: list) -> list:
@@ -15,6 +15,7 @@ def ReadFolder(folder_name: str) -> dict | None:
 		logfile = open(f'{folder_name}/BranchAndPrice.log', 'r')
 		graphfile = open(f'{folder_name}/graph.csv', 'r')
 	except:
+		traceback.print_exc()
 		print(folder_name, 'ERROR')
 	if logfile == None or graphfile == None:
 		return None
