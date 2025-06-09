@@ -60,15 +60,15 @@ def main():
 	N_list = list(range(20, 50))
 	S_list = [4, 5, 6, 7, 8]
 
-	home_dir = os.getcwd()
-	test_dir = 'test/RANDOM'
+	home_dir: str = os.getcwd()
+	test_dir: str = 'test/RANDOM_OLD'
 
 	for N in N_list:
 		for S in S_list:
 			for seed in seed_list:
 				numpy.random.seed(seed)
 				Edges = GenerateTypeIGraph(N)
-				folder_name = f'{home_dir}/{test_dir}/N_{N}/S_{S}/TEST{seed}'
+				folder_name = f'{home_dir}/{test_dir}/S_{S}/N_{N}/{seed}'
 				PrintGraph(Edges, folder_name)
 				PrintInput(S, folder_name)
 
