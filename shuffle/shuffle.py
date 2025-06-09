@@ -252,6 +252,7 @@ def main():
 			loopFlag = True
 			while loopFlag:
 				try:
+					loopFlag = False
 					## Get the system's free ports for shuffling
 					free_ports, sockets = find_free_ports(n)
 					assert(len(free_ports) == n)
@@ -262,14 +263,15 @@ def main():
 					for s in sockets:
 						s.close()
 
+					loopFlag = True
 					time_begin = time.time()
 					Shuffle(n, sockets, free_ports)
 					time_end = time.time()
+					loopFlag = False
 
 					## Remove all latency after shuffling
 					RemoveLatency(n)
 					time_used.append(time_end - time_begin)
-					loopFlag = False
 				except:
 					traceback.print_exc()
 					print()
