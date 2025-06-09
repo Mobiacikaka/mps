@@ -241,6 +241,7 @@ def CompileMPC():
 
 def main():
 	SudoCommand('mkdir -p logs')
+	SudoCommand('mkdir -p DATA')
 
 	AttributeList: list = ReadRandom()
 	for attribute in AttributeList:
@@ -287,8 +288,6 @@ def main():
 					traceback.print_exc()
 					print()
 
-	SudoCommand('mkdir -p DATA')
-	for attribute in AttributeList:
 		folder:str = f'DATA/N{attribute["N"]}/S{attribute["S"]}/seed{attribute["seed"]}'
 		SudoCommand(f'mkdir -p {folder}')
 		datafile = open(f'shuffle/{folder}/log.json', 'w')
