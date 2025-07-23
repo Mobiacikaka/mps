@@ -1,8 +1,10 @@
 import copy
 
 class Graph:
-	def __init__(self) -> None:
-		self.E = self.ReadGraphFromFile()
+	def __init__(self, Edges: list=[]) -> None:
+		self.E = Edges
+		if len(self.E) == 0:
+			self.E = self.ReadGraphFromFile()
 		self.n = len(self.E)
 		self.V = [i for i in range(self.n)]
 		self.a = [1 for _ in range(self.n)]
