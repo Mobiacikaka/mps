@@ -7,13 +7,75 @@ from src.graph import Graph
 import utils.analyzer as al
 import json
 import numpy
+import traceback
+from utils.compare import ReadBPCFolder
+from utils.analyzer import MaxEdgeRank as Scoring
 
-def main():
-	N = 49
-	S_list = [4, 5, 6, 7, 8]
+def DrawNS(N: int|list, S: int|list):
+	variable = None
+	assert(type(N) != type(S))
+	if type(N) == int:
+		variable = 'S'
+		plt.title(f'N={N}')
+	else:
+		variable = 'N'
+		plt.title(f'S={S}')
 	seed_list = list(range(0, 10))
 
-	x_val = S_list
+	x_val = []
+	if variable == 'S':
+		x_val = S
+	else:
+		x_val = N
+	assert(type(x_val) == list)
+
+	## branch and price and cut value
+	bpc_val = []
+	## random partition value
+	rp_val = []
+	## greedy partition value
+	gp_val = []
+	for v in x_val:
+		bpc_score_list = []
+		rp_score_list = []
+		gp_score_list = []
+		if variable == 'S':
+			S = v
+		else:
+			N = v
+		assert(type(S) == int and type(N) == int)
+		for seed in seed_list:
+			try:
+				data = ReadBPCFolder(f'./test/RANDOM/S_{S}/N_{N}/{seed}')
+				assert(data != None)
+				solution = data['solution']
+				edges = data['edges']
+				graph = Graph(edges=edges)
+				## branch and price and cut scoring
+				score = Scoring(graph, partition=solution)
+				bpc_score_list.append(score)
+				## random partition scoring
+				score = Scoring(graph, partition=RandomPartition(graph, S))
+				rp_score_list.append(score)
+				## greedy partition scoring
+				score = Scoring(graph, partition=GreedyPartition(graph, S))
+				gp_score_list.append(score)
+			except:
+				traceback.print_exc()
+				print(f'N{N} S{S} seed{seed} NOT GOOD!')
+		bpc_val.append(numpy.mean(bpc_score_list))
+		rp_val.append(numpy.mean(rp_score_list))
+		gp_val.append(numpy.mean(gp_score_list))
+
+	plt.plot(x_val, rp_val, marker='s', linestyle='--', color='green', label='Random Partition')
+	plt.plot(x_val, gp_val, marker='^', linestyle='-.', color='red', label='Greedy Partition')
+	plt.plot(x_val, bpc_val, marker='o', linestyle='-', color='blue', label='Branch-and-Price-and-Cut')
+	plt.xlabel(variable)
+	plt.ylabel('Mean Rank')
+	plt.legend()
+	plt.grid()
+	plt.show()
+	plt.savefig('')
 
 def main2():
 	# N_list = list(range(20, 30))
@@ -53,7 +115,7 @@ def main2():
 		if data == None:
 			continue
 		Edges = data['edges']
-		graph = Graph(Edges=Edges)
+		graph = Graph(edges=Edges)
 
 		## Random Partition trials
 		RP_trial_number = 100
@@ -65,7 +127,7 @@ def main2():
 			maxEdgeRank = al.MaxEdgeRank(graph, solution)
 			# print(maxEdge)
 			maxEdges.append(maxEdgeRank)
-		
+
 		print(arg)
 		result_BEST[arg] = al.MinimumPossibleRankInTheory(N, S)
 		result_BRC[arg] = al.MaxEdgeRank(graph, data['solution'])
@@ -108,4 +170,7 @@ def main2():
 			print()
 
 if __name__ == '__main__':
-	main()
+	# for N in range(20, 50):
+	# 	DrawN(N)
+	DrawNS(48, [4, 5, 6, 7, 8])
+	DrawNS([20, 25, 30, 35, 40, 45], 6)
