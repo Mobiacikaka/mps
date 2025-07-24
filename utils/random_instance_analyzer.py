@@ -12,6 +12,7 @@ def ReadFolder(folder_name: str) -> dict | None:
 	except:
 		traceback.print_exc()
 		print(folder_name, 'ERROR')
+		return
 	if logfile == None or graphfile == None:
 		return None
 

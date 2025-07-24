@@ -7,13 +7,32 @@
 ## en1 en2 ... enn      ##
 ##########################
 
-import numpy
+import numpy, math
 
-def RandomGraphGenerator1():
+def EuclideanDistance(vi: tuple[int, int], vj: tuple[int, int]):
+	return math.sqrt(
+		(vi[0] - vj[0])**2 + (vi[1] - vj[1]) ** 2
+	)
+
+def GetEdgesFromNodes(nodes: list) -> list[list[float]]:
+	n = len(nodes)
+	edges = [[0.0 for _ in range(n)] for _ in range(n)]
+	for i in range(n-1):
+		for j in range(i+1, n):
+			edges[i][j] = edges[j][i] = EuclideanDistance(nodes[i], nodes[j])
+	return edges
+
+#################################
+#################################
+### Return nodes' corrdinates ###
+#################################
+#################################
+def UniformRandomGenerator(N: int, ):
 	## generate complete uniform vertices
-	pass
+	nodes = numpy.random.uniform(0, 100, size=(N, 2)).tolist()
+	return nodes
 
-def RandomGraphGenerator2(N: int=100, c_nodes=5):
+def HotspotRandomGenerator(N: int=20, c_nodes=5):
 	## generate 
 	num_nodes = N
 	num_central_nodes = c_nodes

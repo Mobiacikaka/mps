@@ -1,10 +1,13 @@
 import copy
+from utils.GraphGenerator import GetEdgesFromNodes
 
 class Graph:
-	def __init__(self, Edges: list=[]) -> None:
-		self.E = Edges ## Edges with Sorted And Reassigned Values
-		if len(self.E) == 0:
-			self.E = self.ReadGraphFromFile()
+	def __init__(self, nodes: list=[]) -> None:
+		self.nodes = nodes
+		if len(nodes) == 0:
+			self.Edges = self.ReadGraphFromFile()
+		else:
+			self.Edges = GetEdgesFromNodes(self.nodes)
 		self.n = len(self.E)
 		self.V = [i for i in range(self.n)]
 		self.a = [1 for _ in range(self.n)]

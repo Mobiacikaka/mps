@@ -1,5 +1,5 @@
 #!/bin/python
-import math, numpy
+import numpy
 import matplotlib.pyplot as plt
 import contextlib
 
@@ -7,13 +7,10 @@ from src.BranchPriceCut import BranchAndPrice as BPC
 from src.RandomPartition import RandomPartition as RP
 from src.GreedyPartition import GreedyPartition as GP
 from src.graph import Graph
-from utils.RandomGraph import RandomGraphGenerator2 as RGG2
+from utils.GraphGenerator import HotspotRandomGenerator as HRG
+from utils.GraphGenerator import GetEdgesFromNodes
 from utils.analyzer import MaxEdgeRank as MER
-
-def EuclideanDistance(vi: tuple[int, int], vj: tuple[int, int]):
-	return math.sqrt(
-		(vi[0] - vj[0])**2 + (vi[1] - vj[1]) ** 2
-	)
+from utils.random_instance_analyzer import ReadFolder as ReadBPCFolder
 
 def PrintNodes2Graph(points):
 	x_vals = [p[0] for p in points]
@@ -27,7 +24,7 @@ def PrintNodes2Graph(points):
 	plt.axis("equal")
 	plt.show()
 
-def PrintPartition(points, solution):
+def DrawPartition(points, solution):
 	x_vals = [p[0] for p in points]
 	y_vals = [p[1] for p in points]
 
@@ -51,28 +48,26 @@ def PrintPartition(points, solution):
 	plt.grid(True)
 	plt.show()
 
-## 
-def Compare3Algorithms(n: int, c_nodes: int, S: int, seed: int, GraphGenerator=RGG2):
-	numpy.random.seed(seed)
-	nodes = GraphGenerator(N=n, c_nodes=c_nodes)
-	# PrintNodes2Graph(nodes)
+## take graph and S as input, output the rank of the max edge
+def Compare3Algorithms(
+	graph      : Graph,
+	S          : int,
+	verbose    : bool=True,
+):
+	G = graph
+	nodes = graph.nodes
 
-	edges = [[0.0 for _ in range(n)] for _ in range(n)]
-	for i in range(n-1):
-		for j in range(i+1, n):
-			edges[i][j] = edges[j][i] = EuclideanDistance(nodes[i], nodes[j])
-
-	G = Graph(edges)
-
-	solution_rp = RP(G, S)
-	solution_gp = GP(G, S)
+	## no stdout output
 	with open('/dev/null', 'w') as fnull:
 		with contextlib.redirect_stdout(fnull):
+			solution_rp = RP(G, S)
+			solution_gp = GP(G, S)
 			solution_bpc = BPC(G, S)
 
 	# print(solution_rp, solution_gp, solution_bpc, sep='\n\n')
-	PrintPartition(nodes, solution_rp)
-	PrintPartition(nodes, solution_gp)
-	PrintPartition(nodes, solution_bpc)
+	if verbose:
+		DrawPartition(nodes, solution_rp)
+		DrawPartition(nodes, solution_gp)
+		DrawPartition(nodes, solution_bpc)
 
 	return MER(G, solution_rp), MER(G, solution_gp), MER(G, solution_bpc)

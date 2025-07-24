@@ -1,5 +1,6 @@
 #!/bin/python3
 
+import matplotlib.pyplot as plt
 from src.RandomPartition import RandomPartition
 from src.GreedyPartition import GreedyPartition
 from src.graph import Graph
@@ -8,6 +9,13 @@ import json
 import numpy
 
 def main():
+	N = 49
+	S_list = [4, 5, 6, 7, 8]
+	seed_list = list(range(0, 10))
+
+	x_val = S_list
+
+def main2():
 	# N_list = list(range(20, 30))
 	S_list = [4,5,6,7,8]
 	seed_list = list(range(0, 10))
