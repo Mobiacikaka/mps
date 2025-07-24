@@ -2,12 +2,14 @@ import copy
 from utils.GraphGenerator import GetEdgesFromNodes
 
 class Graph:
-	def __init__(self, nodes: list=[]) -> None:
+	def __init__(self, edges: list=[], nodes: list=[],) -> None:
 		self.nodes = nodes
-		if len(nodes) == 0:
-			self.Edges = self.ReadGraphFromFile()
-		else:
-			self.Edges = GetEdgesFromNodes(self.nodes)
+		self.E = edges
+		if len(edges) == 0:
+			if len(nodes) != 0:
+				self.E = GetEdgesFromNodes(self.nodes)
+			else:
+				self.E = self.ReadGraphFromFile()
 		self.n = len(self.E)
 		self.V = [i for i in range(self.n)]
 		self.a = [1 for _ in range(self.n)]
