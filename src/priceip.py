@@ -1,6 +1,6 @@
 import gurobipy
 from gurobipy import GRB
-from graph import Graph
+from src.graph import Graph
 
 class PriceIP:
 	def __init__(self, G: Graph, S: int) -> None:

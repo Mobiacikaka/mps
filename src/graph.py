@@ -2,7 +2,7 @@ import copy
 
 class Graph:
 	def __init__(self, Edges: list=[]) -> None:
-		self.E = Edges
+		self.E = Edges ## Edges with Sorted And Reassigned Values
 		if len(self.E) == 0:
 			self.E = self.ReadGraphFromFile()
 		self.n = len(self.E)
@@ -35,7 +35,9 @@ class Graph:
 	def SortEdge(self) -> None:
 		EdgeName = [(i,j) for i in range(self.n-1) for j in range(i+1, self.n)]
 		EdgeName = sorted(EdgeName, key=lambda x: self.E[x[0]][x[1]], reverse=True)
-		self.OriginalEdgeValues = copy.deepcopy(self.E)
+		self.sortedEdgeName = EdgeName
+		## Edges with original values
+		self.Edges= copy.deepcopy(self.E)
 		for k in range(len(EdgeName)):
 			i = EdgeName[k][0]
 			j = EdgeName[k][1]
@@ -71,7 +73,7 @@ class Graph:
 
 	def PrintGraph(self, filename: str='Graph.txt'):
 		f = open(filename, 'w')
-		for edges in self.OriginalEdgeValues:
+		for edges in self.Edges:
 			for edge in edges:
 				f.write(str(edge)+',')
 			f.write('\n')

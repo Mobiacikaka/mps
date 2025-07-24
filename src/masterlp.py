@@ -1,7 +1,7 @@
 import gurobipy, math, itertools, copy
 from gurobipy import GRB
-from graph import Graph
-import heuristic
+from src.graph import Graph
+import src.heuristic as heuristic
 
 class MLP:
 	def __init__(

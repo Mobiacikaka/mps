@@ -1,6 +1,6 @@
 #!/bin/python3
 
-from graph import Graph
+from src.graph import Graph
 import numpy
 
 def RandomPartition(graph: Graph, S: int):

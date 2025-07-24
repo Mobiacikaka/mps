@@ -12,7 +12,6 @@ def logging(content: str, logfile: str, append: bool=True):
 		os.system(f'echo [{current_time}]\t{content} >> {logfile}')
 	return
 
-
 def Processing(cwd: str):
 	try:
 		logfile = open(f'{cwd}/BranchAndPrice.log', 'w')
@@ -50,3 +49,27 @@ if __name__ == '__main__':
 	TEST_FOLDER = input()
 	logging('TEST START', logfile=runlog, append=False)
 	run(TEST_FOLDER)
+
+"""
+import sys
+import contextlib
+
+class Tee:
+    def __init__(self, *files):
+        self.files = files
+
+    def write(self, data):
+        for f in self.files:
+            f.write(data)
+
+    def flush(self):
+        for f in self.files:
+            f.flush()
+
+with open("log.txt", "w") as logfile:
+    tee = Tee(sys.stdout, logfile)
+    with contextlib.redirect_stdout(tee):
+        result = noisy_function()
+
+print("Return value:", result)
+"""

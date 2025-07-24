@@ -1,10 +1,10 @@
 import numpy, colorama, copy
 from gurobipy import GRB
 
-import heuristic
-from graph import Graph
-from masterlp import MLP
-from priceip import PriceIP as SUB
+import src.heuristic as heuristic
+from src.graph import Graph
+from src.masterlp import MLP
+from src.priceip import PriceIP as SUB
 
 class Node:
 	def __init__(

@@ -1,12 +1,7 @@
 import os, ast, traceback
 import matplotlib.pyplot as plt
 
-def UnfoldSolution(solution_list: list, collapsed_comb: list) -> list:
-	for solution in solution_list:
-		for i in range(len(collapsed_comb), 0, -1):
-			x, y = collapsed_comb[i-1]
-			solution.insert(y, solution[x])
-	return solution_list
+from utils.analyzer import UnfoldSolution
 
 def ReadFolder(folder_name: str) -> dict | None:
 	logfile = None

@@ -1,12 +1,10 @@
-import numpy, time
 from gurobipy import GRB
+from src.graph import Graph
+from src.node import Node
+from utils.analyzer import UnfoldSolution
 
-from graph import Graph
-from node import Node
-
-def BranchAndPrice(S: int, verbose: bool=True):
-	OriginalGraph = Graph()
-	# OriginalGraph.PrintGraph()
+def BranchAndPrice(graph: Graph, S: int, verbose: bool=True):
+	OriginalGraph = graph
 
 	upper_bound, lower_bound = float('inf'), 0
 	root_node = Node(
@@ -92,20 +90,14 @@ def BranchAndPrice(S: int, verbose: bool=True):
 	optimum_mlp.model.optimize()
 	sol = optimum_mlp.model.getVars()
 	print('Accepted Columns:')
+	solution = []
 	for i in range(optimum_mlp.n_col):
 		if sol[i].X != 0.0:
 			print(sol[i].VarName, sol[i].X, optimum_mlp.columns[i])
+			solution.append(optimum_mlp.columns[i])
 
 	print()
 	print('Total Columns Generated: ', optimum_mlp.n_col)
 	print('Total Cutting Planes Generated: ', optimum_mlp.n_cup)
 
-if __name__ == '__main__':
-	S = int(input())
-
-	time_start = time.time()
-
-	BranchAndPrice(S)
-
-	time_end = time.time()
-	print('Total Time: ', time_end - time_start)
+	return UnfoldSolution(solution, optimum_collapse_combo)

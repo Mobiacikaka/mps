@@ -2,9 +2,9 @@ import gurobipy, heapq, colorama, time, itertools
 from typing import List
 from gurobipy import GRB
 
-from masterlp import MLP
-from priceip import PriceIP as SUB
-from graph import Graph
+from src.masterlp import MLP
+from src.priceip import PriceIP as SUB
+from src.graph import Graph
 
 class CompareClass(tuple):
 	def __lt__(self, other):
