@@ -4,14 +4,55 @@ import matplotlib.pyplot as plt
 from src.RandomPartition import RandomPartition
 from src.GreedyPartition import GreedyPartition
 from src.graph import Graph
+from utils.GraphGenerator import HotspotRandomGenerator as HRG
+from utils.GraphGenerator import UniformRandomGenerator as URG
+from utils.GraphGenerator import GetEdgesFromNodes as GEN
 import utils.analyzer as al
 import json
 import numpy
 import traceback
+import contextlib
 from utils.compare import ReadBPCFolder
 from utils.analyzer import MaxEdgeRank as Scoring
+from src.BranchPriceCut import BranchAndPrice as BPC
+import os
 
-def DrawNS(N: int|list, S: int|list):
+def ReadGraph(filename: str='graph.csv'):
+	file = open(filename, 'r')
+	lines: list[str] = [line.strip(',\n') for line in file.readlines()]
+	edges: list[list[float]] = []
+	for line in lines:
+		edges.append([float(edge) for edge in line.split(',')])
+	return edges
+
+## GG == Graph Generator
+def GGUniRand(N: int, S: int, seed: int):
+	# graph_filename = f'./test/RANDOM/graph__N_{N}__seed_{seed}.csv'
+	# if os.path.exists(graph_filename):
+	# 	edges = ReadGraph()
+	# else:
+	# 	nodes = URG(N, seed)
+	# 	edges = GEN(nodes=nodes)
+	# log_filename = f'./test/RANDOM/'
+	data = ReadBPCFolder(f'./test/RANDOM/S_{S}/N_{N}/{seed}')
+	assert(data != None)
+	solution = data['solution']
+	edges = data['solution']
+	graph = Graph(edges=edges)
+	return graph, solution
+
+def GGHotSpot(N: int, S: int, seed: int):
+	nodes = HRG(N, seed=seed)
+	edges = GEN(nodes)
+	graph = Graph(edges=edges)
+	graph.PrintGraph(f'./test/HOTSPOT/bpc_N_{N}_S_{S}_seed_{seed}_graph.csv')
+	assert(type(graph) == Graph)
+	with open(f'./test/HOTSPOT/bpc_N_{N}_S_{S}_seed_{seed}.log', 'w') as fnull:
+		with contextlib.redirect_stdout(fnull):
+			solution_bpc = BPC(graph, S)
+	return graph, solution_bpc
+
+def DrawNS(N: int|list, S: int|list, GG: str='UniRand'):
 	variable = None
 	assert(type(N) != type(S))
 	if type(N) == int:
@@ -46,11 +87,12 @@ def DrawNS(N: int|list, S: int|list):
 		assert(type(S) == int and type(N) == int)
 		for seed in seed_list:
 			try:
-				data = ReadBPCFolder(f'./test/RANDOM/S_{S}/N_{N}/{seed}')
-				assert(data != None)
-				solution = data['solution']
-				edges = data['edges']
-				graph = Graph(edges=edges)
+				graph, solution = None, None
+				if GG == 'UniRand':
+					graph, solution = GGUniRand(N, S, seed)
+				elif GG == 'HotSpot':
+					graph, solution = GGHotSpot(N, S, seed)
+				assert(graph != None and solution != None)
 				## branch and price and cut scoring
 				score = Scoring(graph, partition=solution)
 				bpc_score_list.append(score)
@@ -74,103 +116,12 @@ def DrawNS(N: int|list, S: int|list):
 	plt.ylabel('Mean Rank')
 	plt.legend()
 	plt.grid()
+	plt.savefig(f'figs/MEAN_RANK__{GG}__N_{N}__S_{S}.svg')
 	plt.show()
-	plt.savefig('')
-
-def main2():
-	# N_list = list(range(20, 30))
-	S_list = [4,5,6,7,8]
-	seed_list = list(range(0, 10))
-	N_list = [49]
-	# S_list = [4]
-	# seed_list = [0]
-
-	args = [
-		(N, S, seed)
-		for N in N_list
-		for S in S_list
-		for seed in seed_list
-	]
-
-	data_dict = {}
-
-	for N, S, seed in args:
-		data = None
-		try:
-			f = open(f'./DATA/N_{N}_S_{S}_seed_{seed}.json', 'r')
-			data = json.load(f)
-			data_dict[(N, S, seed)] = data
-		except:
-			data_dict[(N, S, seed)] = None
-			print(f'N {N} S {S} seed {seed} file not exist')
-
-	result_BEST = {}
-	result_BRC = {}
-	result_RANDOM = {}
-	result_GREEDY= {}
-
-	for arg in args:
-		N, S, seed = arg
-		data = data_dict.get(arg, None)
-		if data == None:
-			continue
-		Edges = data['edges']
-		graph = Graph(edges=Edges)
-
-		## Random Partition trials
-		RP_trial_number = 100
-		maxEdges = []
-		solution = []
-		for _ in range(RP_trial_number):
-			solution = RandomPartition(graph, S)
-			# print(solution)
-			maxEdgeRank = al.MaxEdgeRank(graph, solution)
-			# print(maxEdge)
-			maxEdges.append(maxEdgeRank)
-
-		print(arg)
-		result_BEST[arg] = al.MinimumPossibleRankInTheory(N, S)
-		result_BRC[arg] = al.MaxEdgeRank(graph, data['solution'])
-		sol_Greedy = GreedyPartition(graph, S)
-		result_GREEDY[arg] = al.MaxEdgeRank(graph, sol_Greedy)
-		result_RANDOM[arg] = min(maxEdges)
-
-		# print("GREEDY")
-		# for sol in sol_Greedy:
-		# 	print(sum(sol))
-		# print("BPC")
-		# for sol in data['solution']:
-		# 	print(sum(sol))
-		# return
-
-	for N in N_list:
-		for S in S_list:
-			BRC = []
-			RANDOM = []
-			GREEDY = []
-			for seed in seed_list:
-				data = result_BRC.get((N, S, seed), None)
-				if data == None:
-					continue
-				BRC.append(data)
-
-				data = result_GREEDY.get((N, S, seed), None)
-				if data == None:
-					continue
-				GREEDY.append(data)
-
-				data = result_RANDOM.get((N, S, seed), None)
-				if data == None:
-					continue
-				RANDOM.append(data)
-
-			print(numpy.mean(BRC))
-			print(numpy.mean(RANDOM))
-			print(numpy.mean(GREEDY))
-			print()
 
 if __name__ == '__main__':
 	# for N in range(20, 50):
 	# 	DrawN(N)
-	DrawNS(48, [4, 5, 6, 7, 8])
-	DrawNS([20, 25, 30, 35, 40, 45], 6)
+	DrawNS(21, [4, 5, 6, 7, 8])
+	# DrawNS([20, 25, 30, 35, 40, 45], 6)
+	# DrawNS(21, [4, 5, 6, 7, 8], GG='HotSpot')

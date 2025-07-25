@@ -27,13 +27,15 @@ def GetEdgesFromNodes(nodes: list) -> list[list[float]]:
 ### Return nodes' corrdinates ###
 #################################
 #################################
-def UniformRandomGenerator(N: int, ):
+def UniformRandomGenerator(N: int, seed: int=0):
 	## generate complete uniform vertices
+	numpy.random.seed(seed)
 	nodes = numpy.random.uniform(0, 100, size=(N, 2)).tolist()
 	return nodes
 
-def HotspotRandomGenerator(N: int=20, c_nodes=5):
+def HotspotRandomGenerator(N: int, c_nodes: int=4, seed: int=0):
 	## generate 
+	numpy.random.seed(seed)
 	num_nodes = N
 	num_central_nodes = c_nodes
 	central_nodes = numpy.random.uniform(10, 90, size=(num_central_nodes, 2)).tolist()
@@ -41,9 +43,12 @@ def HotspotRandomGenerator(N: int=20, c_nodes=5):
 	nodes = []
 	for central_node in central_nodes:
 		# nodes.append(central_node)
-
 		relative_distance = numpy.random.uniform(-10, 10, size=(num_nodes//num_central_nodes, 2)).tolist()
 		for relative_node in relative_distance:
 			nodes.append([central_node[0]+relative_node[0], central_node[1]+relative_node[1]])
+
+	assert(len(nodes) <= N)
+	if len(nodes) < N:
+		nodes += numpy.random.uniform(0, 100, size=(N-len(nodes), 2)).tolist()
 
 	return nodes
