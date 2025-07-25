@@ -14,8 +14,10 @@ import traceback
 import contextlib
 from utils.compare import ReadBPCFolder
 from utils.analyzer import MaxEdgeRank as Scoring
+from utils.analyzer import UnfoldSolution
 from src.BranchPriceCut import BranchAndPrice as BPC
 import os
+import ast
 
 def ReadGraph(filename: str='graph.csv'):
 	file = open(filename, 'r')
@@ -24,6 +26,47 @@ def ReadGraph(filename: str='graph.csv'):
 	for line in lines:
 		edges.append([float(edge) for edge in line.split(',')])
 	return edges
+
+def ReadLogFile(filename: str) -> dict | None:
+	logfile = open(filename, 'r')
+
+	## Read Log
+	lines: list = logfile.readlines()
+	attribute: dict = {}
+	solution : list = [] ## solution lines
+	for line in lines:
+		if 'Total instances' in line:
+			attribute['total instance'] = int(line.split(':')[1])
+			continue
+		if 'Solved exactly' in line:
+			attribute['solve instance'] = int(line.split(':')[1])
+			continue
+		if 'Total Columns Generated' in line:
+			attribute['column num']     = int(line.split(':')[1])
+			continue
+		if 'Total Cutting Planes Generated' in line:
+			attribute['c-plane num']    = int(line.split(':')[1])
+			continue
+		if 'Upper bound' in line:
+			attribute['upper bound']    = float(line.split(':')[1])
+			continue
+		if 'Total Time' in line:
+			attribute['time']           = float(line.split(':')[1])
+			continue
+		if 'Divided Nodes' in line:
+			attribute['divided'] = ast.literal_eval(line.strip('Divided Nodes '))
+			continue
+		if 'Collapsed Nodes ' in line:
+			attribute['collapsed'] = ast.literal_eval(line.strip('Collapsed Nodes '))
+			continue
+		if ' 1.0 ' in line:
+			solution.append(ast.literal_eval(line.split(' 1.0 ')[1]))
+			continue
+	if solution == []:
+		return None
+	attribute['solution'] = solution
+	UnfoldSolution(attribute['solution'], attribute['collapsed'])
+	return attribute
 
 ## GG == Graph Generator
 def GGUniRand(N: int, S: int, seed: int):
@@ -37,19 +80,33 @@ def GGUniRand(N: int, S: int, seed: int):
 	data = ReadBPCFolder(f'./test/RANDOM/S_{S}/N_{N}/{seed}')
 	assert(data != None)
 	solution = data['solution']
-	edges = data['solution']
+	edges = data['edges']
 	graph = Graph(edges=edges)
 	return graph, solution
 
 def GGHotSpot(N: int, S: int, seed: int):
-	nodes = HRG(N, seed=seed)
-	edges = GEN(nodes)
-	graph = Graph(edges=edges)
-	graph.PrintGraph(f'./test/HOTSPOT/bpc_N_{N}_S_{S}_seed_{seed}_graph.csv')
-	assert(type(graph) == Graph)
-	with open(f'./test/HOTSPOT/bpc_N_{N}_S_{S}_seed_{seed}.log', 'w') as fnull:
-		with contextlib.redirect_stdout(fnull):
-			solution_bpc = BPC(graph, S)
+	graph_filename = f'./test/HOTSPOT/graph/graph__N{N}__seed{seed}.csv'
+	log_filename = f'./test/HOTSPOT/log/bpc__N{N}__S{S}__seed{seed}.log'
+
+	## Check graph file existence
+	if os.path.exists(graph_filename):
+		edges = ReadGraph(graph_filename)
+		graph = Graph(edges=edges)
+	else:
+		nodes = HRG(N, seed=seed)
+		edges = GEN(nodes=nodes)
+		graph = Graph(edges=edges)
+		graph.PrintGraph(graph_filename)
+
+	## Check log file existence
+	if os.path.exists(log_filename):
+		data = ReadLogFile(log_filename)
+		assert(data != None)
+		solution_bpc = data['solution']
+	else:
+		with open(log_filename, 'w') as fnull:
+			with contextlib.redirect_stdout(fnull):
+				solution_bpc = BPC(graph, S)
 	return graph, solution_bpc
 
 def DrawNS(N: int|list, S: int|list, GG: str='UniRand'):
@@ -117,11 +174,12 @@ def DrawNS(N: int|list, S: int|list, GG: str='UniRand'):
 	plt.legend()
 	plt.grid()
 	plt.savefig(f'figs/MEAN_RANK__{GG}__N_{N}__S_{S}.svg')
-	plt.show()
+	# plt.show()
 
 if __name__ == '__main__':
-	# for N in range(20, 50):
-	# 	DrawN(N)
-	DrawNS(21, [4, 5, 6, 7, 8])
-	# DrawNS([20, 25, 30, 35, 40, 45], 6)
-	# DrawNS(21, [4, 5, 6, 7, 8], GG='HotSpot')
+	S_list = [4, 5, 6, 7, 8]
+	for N in range(20, 50):
+		DrawNS(N, S=S_list, GG='UniRand')
+	# DrawNS(48, [4, 5, 6, 7, 8], GG='UniRand')
+	# DrawNS([20, 25, 30, 35, 40, 45], 6, GG='UniRand')
+	# DrawNS(48, [4, 5, 6, 7, 8], GG='HotSpot')

@@ -221,6 +221,7 @@ class MLP:
 		return True
 
 	def write(self, filename='model.lp'):
+		return
 		self.model.write(filename)
 
 	def PriceColumn(self, column: list):

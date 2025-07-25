@@ -40,6 +40,7 @@ class PriceIP:
 		return self.model.ObjVal
 
 	def write(self):
+		return
 		self.model.write('sub_model.lp')
 
 	def AddCuttingPlanesSUB(self, Q: list):
