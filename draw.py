@@ -114,10 +114,10 @@ def DrawNS(N: int|list, S: int|list, GG: str='UniRand'):
 	assert(type(N) != type(S))
 	if type(N) == int:
 		variable = 'S'
-		plt.title(f'N={N}')
+		title = f'N={N}'
 	else:
 		variable = 'N'
-		plt.title(f'S={S}')
+		title = f'S={S}'
 	seed_list = list(range(0, 10))
 
 	x_val = []
@@ -171,15 +171,19 @@ def DrawNS(N: int|list, S: int|list, GG: str='UniRand'):
 	plt.plot(x_val, bpc_val, marker='o', linestyle='-', color='blue', label='Branch-and-Price-and-Cut')
 	plt.xlabel(variable)
 	plt.ylabel('Mean Rank')
+	plt.title(title)
 	plt.legend()
 	plt.grid()
-	plt.savefig(f'figs/MEAN_RANK__{GG}__N_{N}__S_{S}.svg')
+	plt.savefig(f'figs/MEAN_RANK__{GG}__{title}.svg')
 	# plt.show()
 
 if __name__ == '__main__':
 	S_list = [4, 5, 6, 7, 8]
-	for N in range(20, 50):
-		DrawNS(N, S=S_list, GG='UniRand')
+	N_list = list(range(20, 50))
+	for N in N_list:
+		DrawNS(N=N, S=S_list, GG='UniRand')
+	for S in S_list:
+		DrawNS(N=N_list, S=S, GG='UniRand')
 	# DrawNS(48, [4, 5, 6, 7, 8], GG='UniRand')
 	# DrawNS([20, 25, 30, 35, 40, 45], 6, GG='UniRand')
 	# DrawNS(48, [4, 5, 6, 7, 8], GG='HotSpot')
