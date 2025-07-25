@@ -2,8 +2,11 @@ from gurobipy import GRB
 from src.graph import Graph
 from src.node import Node
 from utils.analyzer import UnfoldSolution
+import time
 
 def BranchAndPrice(graph: Graph, S: int, verbose: bool=True):
+	time_start = time.time()
+
 	OriginalGraph = graph
 
 	upper_bound, lower_bound = float('inf'), 0
@@ -78,6 +81,8 @@ def BranchAndPrice(graph: Graph, S: int, verbose: bool=True):
 			candidate_node.append(Node_Div)
 			candidate_node.append(Node_Cop)
 
+	time_end = time.time()
+
 	print()
 	print('Total instances: ', total_instances)
 	print('Solved exactly: ', solved_exactly)
@@ -99,5 +104,6 @@ def BranchAndPrice(graph: Graph, S: int, verbose: bool=True):
 	print()
 	print('Total Columns Generated: ', optimum_mlp.n_col)
 	print('Total Cutting Planes Generated: ', optimum_mlp.n_cup)
+	print('Total Time: ', time_end - time_start)
 
 	return UnfoldSolution(solution, optimum_collapse_combo)
