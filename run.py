@@ -36,7 +36,7 @@ def RunBPConHotSpot(N: int, S: int, c_nodes: int, seed: int):
 def run():
 	args = [
 		(N, S, 4, seed)
-		for N in range(20, 21)
+		for N in range(20, 50)
 		for S in range(4, 9)
 		for seed in range(0, 10)
 	]
