@@ -42,7 +42,7 @@ def run():
 	]
 
 	logging('TEST START', logfile=runlog, append=False)
-	pool = multiprocessing.Pool(processes=8)
+	pool = multiprocessing.Pool(processes=multiprocessing.cpu_count()//2)
 	pool.starmap(RunBPConHotSpot, args)
 	pool.close()
 	pool.join()
