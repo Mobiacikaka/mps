@@ -176,6 +176,7 @@ def DrawNS(N: int|list, S: int|list, GG: str='UniRand'):
 	plt.grid()
 	plt.savefig(f'figs/MEAN_RANK__{GG}__{title}.svg')
 	# plt.show()
+	plt.clf()
 
 if __name__ == '__main__':
 	S_list = [4, 5, 6, 7, 8]
