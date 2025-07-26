@@ -183,10 +183,6 @@ if __name__ == '__main__':
 	S_list = [4, 5, 6, 7, 8]
 	N_list = list(range(20, 50))
 	for N in N_list:
-		DrawNS(N=N, S=S_list, GG='HotSpot')
+		DrawNS(N=N, S=S_list, GG='UniRand')
 	for S in S_list:
-		DrawNS(N=N_list, S=S, GG='HotSpot')
-	# DrawNS(48, [4, 5, 6, 7, 8], GG='UniRand')
-	# DrawNS([20, 25, 30, 35, 40, 45], 6, GG='UniRand')
-	# DrawNS(30, [4, 5, 6, 7, 8], GG='HotSpot')
-	# DrawNS([20, 25, 30, 35, 40, 45], 7, GG='HotSpot')
+		DrawNS(N=N_list, S=S, GG='UniRand')
