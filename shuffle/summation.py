@@ -1,4 +1,5 @@
-import math, random, numpy
+import math, random, numpy, torch
+from mechanisms import Piecewise
 
 def calculate_c_gamma_for_fixed_k(n, epsilon, delta, k_fixed):
 	"""
@@ -160,53 +161,6 @@ def CalculatePrivitarizedSum(x_list: list):
 	# print(z)
 	return z
 
-def RandomizedResponse(x, k, eps) -> int:
-	p = math.exp(eps) / (math.exp(eps) + k - 1)
-	x_bar = math.floor(x * k)
-	if random.random() < p:
-		return x_bar
-	else:
-		return numpy.random.randint(0, k)
-
-def decode_freq(hist, k, eps0, n):
-	p = math.exp(eps0) / (math.exp(eps0) + k - 1)
-	q = (1 - p) / (k - 1)
-	est = (hist/n - q) / (p - q)
-	est = numpy.clip(est, 0, 1)
-	return est * n
-
-def grr(x_bucket, k, eps):
-	p = math.exp(eps) / (math.exp(eps) + k - 1)
-	if numpy.random.rand() < p:
-		return x_bucket
-	else:
-		alt = numpy.random.randint(0, k - 1)
-		return alt + (alt >= x_bucket)  # 避免重复
-
-def decode_grr(counts, k, eps, n):
-	p = math.exp(eps) / (math.exp(eps) + k - 1)
-	q = (1 - p) / (k - 1)
-	return (counts / n - q) / (p - q)
-
-# 最后估计均值（假设每个桶中心代表该桶的真实值）
-def estimate_mean(counts, k, eps, n):
-	est_freqs = decode_grr(counts, k, eps, n)
-	bucket_centers = numpy.linspace(0.5/k, 1 - 0.5/k, k)
-	return numpy.sum(est_freqs * bucket_centers)
-
-def quantize(x, k):
-	# x ∈ [0,1]，划分成 k 个桶
-	# 返回桶编号 ∈ {0, ..., k-1}
-	bucket = int(x * k)
-	return min(bucket, k - 1)  # 防止 x=1.0 时越界
-
-def LDPMechanism(x_list, eps, delta, k=100):
-	num_parties = len(x_list)
-	privatized_y_list = [grr(quantize(x, k), k, eps) for x in x_list]
-	hist = numpy.bincount(privatized_y_list, minlength=k)
-	est_counts = estimate_mean(hist, k, eps, num_parties)
-	return est_counts
-
 def main(n_list: list=[]):
 	num_trial = 1000
 	squared_errors_of_multi_shufflers = []
@@ -219,12 +173,12 @@ def main(n_list: list=[]):
 		x_list_of_one_shuffler += x_list
 	sum_of_x = sum(x_list_of_one_shuffler)
 	num_parties = len(x_list_of_one_shuffler)
+	pm = Piecewise(1.0, (0, 1))
 
 	for _ in range(num_trial):
 		z_list_of_multi_shufflers = [CalculatePrivitarizedSum(x_list) for x_list in x_list_list_of_multi_shuffler]
 		z_of_one_shuffler = CalculatePrivitarizedSum(x_list_of_one_shuffler)
-		# z_of_ldp = sum([RandomizedResponse(x, k=10, eps=1.0) for x in x_list_of_one_shuffler])
-		z_of_ldp: float = LDPMechanism(x_list_of_one_shuffler, eps=1.0, delta=0.01)
+		z_of_ldp = pm(torch.tensor(x_list_of_one_shuffler)).mean().tolist()
 
 		# print(sum(x_list_of_one_shuffler), sum(z_list_of_multi_shufflers), z_of_one_shuffler)
 		squared_errors_of_multi_shufflers.append( (sum_of_x/num_parties - sum(z_list_of_multi_shufflers)/num_parties) ** 2 )
