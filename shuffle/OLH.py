@@ -100,17 +100,6 @@ class OLH():
 
 
 	def dispatcher(self):
-		# global g
-		# for e in np.arange(1.0, 1.1, 0.1):
-		# 	print(e, end=' ')
-		# 	args.epsilon = float(e)
-		# 	# try other g
-		# 	self.g = args.projection_range
-		# 	# OLH
-		# 	self.g = int(round(math.exp(args.epsilon))) + 1
-		# 	print(self.g, end=' ')
-		# 	self.main()
-
 		for i in range(0, 7):
 			args.n_user = int(2 ** i * 1000)
 			print(args.n_user, end=' ')
@@ -121,7 +110,7 @@ class OLH():
 
 
 parser = argparse.ArgumentParser(description='Comparisor of different schemes.')
-parser.add_argument('--domain', type=int, default=1024,
+parser.add_argument('--domain', type=int, default=10,
 					help='specify the domain of the representation of domain')
 parser.add_argument('--n_user', type=int, default=1000,
 					help='specify the number of data point, default 10000')
