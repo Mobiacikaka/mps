@@ -65,6 +65,19 @@ def GreedyPartition(graph: Graph, S: int):
 		solution.append(clique_one_hot)
 	return solution
 
+def GreedyPartition2(graph: Graph, S: int):
+	edges = graph.Edges
+	degree = [graph.n-1] * graph.n
+	sortedEdge = graph.sortedEdgeName
+
+	for i,j in sortedEdge:
+		degree[i] -= 1
+		degree[j] -= 1
+		if degree[i] == S:
+			break
+		if degree[j] == S:
+			break
+
 """
 # 示例输入用法（你可以替换 G 为自己的数据）
 if __name__ == "__main__":
