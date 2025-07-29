@@ -23,7 +23,7 @@ class OLH():
 
 	def generate(self):
 		# uniform distribution. one can also use other distributions
-		x = np.random.randint(domain)
+		x = np.random.randint(self.domain)
 		return x
 
 
@@ -63,7 +63,7 @@ class OLH():
 			#         y = np.random.randint(0, g)
 			if p_sample > self.p - self.q:
 				# perturb
-				y = np.random.randint(0, g)
+				y = np.random.randint(0, self.g)
 			self.Y[i] = y
 
 
@@ -96,16 +96,24 @@ class OLH():
 			self.aggregate()
 			results[i] = self.error_metric()
 		print(np.mean(results), np.std(results), )
+		# print(results)
 
 
 	def dispatcher(self):
 		# global g
-		for e in np.arange(2.0, 2.1, 0.1):
+		# for e in np.arange(1.0, 1.1, 0.1):
+		# 	print(e, end=' ')
+		# 	args.epsilon = float(e)
+		# 	# try other g
+		# 	self.g = args.projection_range
+		# 	# OLH
+		# 	self.g = int(round(math.exp(args.epsilon))) + 1
+		# 	print(self.g, end=' ')
+		# 	self.main()
 
-			print(e, end=' ')
-			args.epsilon = float(e)
-			# try other g
-			self.g = args.projection_range
+		for i in range(0, 7):
+			args.n_user = int(2 ** i * 1000)
+			print(args.n_user, end=' ')
 			# OLH
 			self.g = int(round(math.exp(args.epsilon))) + 1
 			print(self.g, end=' ')
@@ -115,11 +123,11 @@ class OLH():
 parser = argparse.ArgumentParser(description='Comparisor of different schemes.')
 parser.add_argument('--domain', type=int, default=1024,
 					help='specify the domain of the representation of domain')
-parser.add_argument('--n_user', type=int, default=10000,
+parser.add_argument('--n_user', type=int, default=1000,
 					help='specify the number of data point, default 10000')
 parser.add_argument('--exp_round', type=int, default=10,
 					help='specify the n_userations for the experiments, default 10')
-parser.add_argument('--epsilon', type=float, default=2,
+parser.add_argument('--epsilon', type=float, default=1.0,
 					help='specify the differential privacy parameter, epsilon')
 parser.add_argument('--projection_range', type=int, default=2,
 					help='specify the domain for projection')
