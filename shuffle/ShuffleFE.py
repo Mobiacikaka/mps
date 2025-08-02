@@ -183,7 +183,7 @@ if __name__ == "__main__":
     c = float(sys.argv[4])
     delta = 1.0 / n / n
     filename = sys.argv[5]
-    fullfile = f"../data/{filename},n={n},B={B}.txt"
+    fullfile = f"{filename},n={n},B={B}.txt"
     n, B, data = load_data(fullfile)
     mu = search_mu(n, epsilon, delta)
     ldfe = LargeDomainFrequencyEstimation(n, B, mu, c)
@@ -196,6 +196,6 @@ if __name__ == "__main__":
         ldfe.analyzer(qid)
     end = time.time()
     ldfe.set_element_query_time((end - start) / 100.0)
-    result_name = f"../result/fe,{filename},C={c},{current_date()}.out"
+    result_name = f"fe,{filename},C={c},{current_date()}.out"
     sys.stdout = open(result_name, "w")
     ldfe.print_info(epsilon, delta)
